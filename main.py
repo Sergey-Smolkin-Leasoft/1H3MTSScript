@@ -234,12 +234,6 @@ class TradingBot1H3M:
                 bearish_fractals.append({
                     'timestamp': timestamps[i],
                     'price': float(highs[i]),
-                    'type': 'bearish'
-                })
-        
-        return bullish_fractals, bearish_fractals
-
-def find_entry_points(self):
     """
     Поиск точек входа на основе фракталов и 3-минутного слома
     """
@@ -247,13 +241,12 @@ def find_entry_points(self):
     bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
     
     # Фильтрация фракталов по сессиям
-    asia_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'asia')
-    ny_fractals_yesterday = self.filter_fractals_by_session(
-        bullish_fractals_1h + bearish_fractals_1h, 'newyork', days_ago=1
-    )
+    frankfurt_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'frankfurt')
+    london_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'london')
+    ny_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'newyork')
     
     # Объединение интересующих нас фракталов
-    target_fractals = asia_fractals + ny_fractals_yesterday
+    target_fractals = frankfurt_fractals + london_fractals + ny_fractals
     
     # Текущие точки набора
     self.fractal_levels = target_fractals
@@ -263,6 +256,14 @@ def find_entry_points(self):
     
     # Проверка 3-минутного слома для определения входа
     entry_signals = []
+    
+    # Проверка времени для GER40
+    if self.symbol == 'GER40':
+        current_time = datetime.now()
+        # Проверяем, что до начала Нью-Йоркской сессии осталось больше 5 минут
+        if current_time.hour == 12 and current_time.minute >= 55:  # 12:55 - 5 минут до 13:00
+            logger.info(f"Пропуск сигнала для GER40: менее 5 минут до начала Нью-Йоркской сессии")
+            return []
     
     for fractal in target_fractals:
         # Проверяем соответствие направления фрактала текущему контексту
@@ -289,12 +290,26 @@ def find_entry_points(self):
             # Проверяем потенциальную цель
             target = self.calculate_target(fractal)
             if target is not None:
-                entry_signals.append({
-                    'fractal': fractal,
-                    'target': float(target),
-                    'entry_price': float(self.data_3m['close'].iloc[-1]),
-                    'direction': self.current_context
-                })
+                entry_price = float(self.data_3m['close'].iloc[-1])
+                
+                # Рассчитываем потенциальную прибыль и убыток
+                if self.current_context == 'long':
+                    potential_profit = target - entry_price
+                    potential_loss = entry_price - fractal['price']
+                else:
+                    potential_profit = entry_price - target
+                    potential_loss = fractal['price'] - entry_price
+                
+                # Проверяем соотношение риск/прибыль
+                if potential_profit / potential_loss >= 1.3:
+                    entry_signals.append({
+                        'fractal': fractal,
+                        'target': float(target),
+                        'entry_price': entry_price,
+                        'direction': self.current_context
+                    })
+                else:
+                    logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: RR < 1.3")
     
     return entry_signals
    
@@ -324,21 +339,29 @@ def find_entry_points(self):
 
 
     def check_fractal_breakout(self, fractal):
-    # Получаем последние 3-минутные свечи
+        """
+        Проверка пробоя фрактала на 3-минутном графике
+        """
+        # Получаем последние 3-минутные свечи
         recent_3m = self.data_3m.tail(20)  # Берем несколько последних свечей
         fractal_price = float(fractal['price'])
-    
+        
+        # Находим последний локальный экстремум
+        last_high = recent_3m['high'].max()
+        last_low = recent_3m['low'].min()
+        
+        # Проверяем, является ли последний экстремум точкой пробоя
         if self.current_context == 'long':
-        # Для лонга ищем пробой бычьего фрактала вверх
             if fractal['type'] == 'bullish':
-                # Fix: Make sure we're accessing DataFrame values correctly
-                return any(float(row['close']) > fractal_price for _, row in recent_3m.iterrows())
+                # Для лонга проверяем, что последний максимум пробил фрактал
+                return last_high > fractal_price and \
+                       any(float(row['close']) > fractal_price for _, row in recent_3m.iterrows())
         else:
-            # Для шорта ищем пробой медвежьего фрактала вниз
             if fractal['type'] == 'bearish':
-            # Fix: Make sure we're accessing DataFrame values correctly
-                return any(float(row['close']) < fractal_price for _, row in recent_3m.iterrows())
-    
+                # Для шорта проверяем, что последний минимум пробил фрактал
+                return last_low < fractal_price and \
+                       any(float(row['close']) < fractal_price for _, row in recent_3m.iterrows())
+        
         return False
 
     def check_skip_conditions(self, fractal):
@@ -373,6 +396,29 @@ def find_entry_points(self):
             logger.error(f"Ошибка при расчете расстояния до цели: {e}")
             skip_reasons.append("Ошибка расчета расстояния до цели")
         
+        # 5. Проверка на Frankfurt manipulation setup
+        if self.current_context == 'long':
+            # Проверяем, что фрактал находится в Франкфуртской сессии
+            if fractal in self.filter_fractals_by_session([fractal], 'frankfurt'):
+                # Проверяем, что Лондонская сессия сняла Франкфуртскую
+                recent_3m = self.data_3m.tail(20)
+                frankfurt_end = 15  # Конец Франкфуртской сессии
+                london_start = 8   # Начало Лондонской сессии
+                
+                # Находим последнюю свечу Франкфуртской сессии
+                frankfurt_candle = recent_3m[(recent_3m.index.hour == frankfurt_end) & 
+                                          (recent_3m.index.minute < 30)].iloc[-1]
+                
+                # Находим первую свечу Лондонской сессии
+                london_candle = recent_3m[(recent_3m.index.hour == london_start) & 
+                                        (recent_3m.index.minute >= 30)].iloc[0]
+                
+                # Проверяем, что Лондонская сессия сняла Франкфуртскую
+                if float(london_candle['low']) < float(frankfurt_candle['low']):
+                    # Проверяем 3м слом
+                    if self.check_fractal_breakout(fractal):
+                        skip_reasons.append("Frankfurt manipulation setup")
+                        
         # 4. Проверка на противоречие контексту
         if (self.current_context == 'long' and fractal['type'] == 'bearish') or \
         (self.current_context == 'short' and fractal['type'] == 'bullish'):
