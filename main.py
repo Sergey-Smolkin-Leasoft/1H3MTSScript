@@ -3,17 +3,19 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta
-import ccxt
 import time
 from ta.trend import SMAIndicator
 import logging
+from twelvedata import TDClient
+from dotenv import load_dotenv
+import os
 
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("trading_bot.log"),
+        logging.FileHandler("trading_bot.log", encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -37,6 +39,17 @@ class TradingBot1H3M:
         self.timeframe_1h = timeframe_1h
         self.timeframe_3m = timeframe_3m
         self.exchange = exchange
+        
+        # Настройка Twelve Data API
+        load_dotenv()
+        self.td_api_key = os.getenv('TWELVE_DATA_API_KEY', '9c614fea46d04e3d8c4f3f76b0541ab6')
+        self.td = TDClient(apikey=self.td_api_key)
+        
+        # Маппинг символов для Twelve Data
+        self.symbol_mapping = {
+            'EURUSD': 'EUR/USD',
+            'GER40': 'DAX'
+        }
         
         # Настройки инструментов
         if symbol == 'EURUSD':
@@ -90,13 +103,42 @@ class TradingBot1H3M:
 
     def fetch_historical_data(self, timeframe, limit=500):
         """
-        Загрузка исторических данных с биржи
+        Загрузка исторических данных с Twelve Data
         """
-        ohlcv = self.exchange.fetch_ohlcv(self.symbol, timeframe, limit=limit)
-        df = pd.DataFrame(ohlcv, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'])
-        df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-        df.set_index('timestamp', inplace=True)
-        return df
+        # Преобразуем временной интервал для Twelve Data
+        td_timeframe = {
+            '1h': '1H',
+            '3m': '3M'
+        }[timeframe]
+        
+        # Получаем данные
+        try:
+            ts = self.td.time_series(
+                symbol=self.symbol_mapping[self.symbol],
+                interval=td_timeframe,
+                outputsize=limit,
+                timezone='UTC'
+            )
+            data = ts.as_pandas()
+            
+            # Переименуем столбцы для совместимости
+            data = data.rename(columns={
+                'datetime': 'timestamp',
+                'open': 'open',
+                'high': 'high',
+                'low': 'low',
+                'close': 'close',
+                'volume': 'volume'
+            })
+            
+            data['timestamp'] = pd.to_datetime(data['timestamp'])
+            data.set_index('timestamp', inplace=True)
+            
+            return data
+            
+        except Exception as e:
+            logger.error(f"Ошибка при получении данных с Twelve Data: {e}")
+            raise
 
     def generate_test_data(self, timeframe):
         """
@@ -538,92 +580,127 @@ class TradingBot1H3M:
             
             logger.info(f"Обновлен дневной лимит (DL): {self.daily_limit}")
 
+    def run(self):
+        """
+        Запуск торгового бота
+        """
+        while True:
+            try:
+                # 1. Загрузка данных
+                self.fetch_data()
+                
+                # 2. Определение контекста рынка
+                self.determine_market_context()
+                
+                # 3. Поиск точек входа
+                entry_signals = self.find_entry_points()
+                
+                # 4. Исполнение сигналов
+                for signal in entry_signals:
+                    self.execute_trade(signal)
+                
+                # 5. Управление открытыми позициями
+                self.manage_open_positions()
+                
+                # 6. Обновление дневного лимита
+                self.update_daily_limit()
+                
+                # 7. Визуализация текущего состояния
+                self.visualize_strategy()
+                
+                # 8. Ожидание следующей итерации (например, каждые 3 минуты)
+                time.sleep(180)  # 3 минуты
+                
+            except Exception as e:
+                logger.error(f"Ошибка в основном цикле: {e}")
+                time.sleep(60)  # При ошибке ждем минуту перед повторной попыткой
+
     def visualize_strategy(self, save_path=None):
-    """
-    Визуализация текущего состояния стратегии
-    """
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12), gridspec_kw={'height_ratios': [3, 1]})
-    
-    # Часовой график
-    recent_1h = self.data_1h.tail(48)  # Последние 2 дня
-    ax1.plot(recent_1h.index, recent_1h['close'], label='Цена закрытия (1H)', color='blue')
-    
-    # Отмечаем фракталы
-    bullish_fractals, bearish_fractals = self.identify_fractals(recent_1h)
-    
-    for f in bullish_fractals:
-        ax1.scatter(f['timestamp'], f['price'], color='green', marker='^', s=100)
-    
-    for f in bearish_fractals:
-        ax1.scatter(f['timestamp'], f['price'], color='red', marker='v', s=100)
-    
-    # Отмечаем DL
-    if self.daily_limit:
-        ax1.axhline(y=self.daily_limit, color='purple', linestyle='--', label='Дневной лимит (DL)')
-    
-    # Отмечаем текущий контекст
-    if self.current_context:
-        context_color = 'green' if self.current_context == 'long' else 'red'
-        ax1.text(recent_1h.index[0], recent_1h['close'].min(), 
-                 f"Контекст: {self.current_context.upper()}", 
-                 color=context_color, fontsize=14)
-    
-    # Отмечаем открытые позиции
-    for pos in self.open_positions:
-        marker = '^' if pos['direction'] == 'long' else 'v'
-        color = 'green' if pos['direction'] == 'long' else 'red'
+        """
+        Визуализация текущего состояния стратегии
+        """
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12), gridspec_kw={'height_ratios': [3, 1]})
         
-        # Находим ближайшую дату к времени входа
-        closest_date = min(recent_1h.index, key=lambda d: abs(d - pos['entry_time']))
+        # Часовой график
+        recent_1h = self.data_1h.tail(48)  # Последние 2 дня
+        ax1.plot(recent_1h.index, recent_1h['close'], label='Цена закрытия (1H)', color='blue')
         
-        ax1.scatter(closest_date, pos['entry_price'], color=color, marker=marker, s=200, edgecolors='black')
-        ax1.axhline(y=pos['target'], color=color, linestyle='-.', alpha=0.7)
-        ax1.axhline(y=pos['stop_loss'], color='black', linestyle=':', alpha=0.7)
-    
-    # 3-минутный график
-    recent_3m = self.data_3m.tail(100)  # Последние 100 3-минутных свечей
-    ax2.plot(recent_3m.index, recent_3m['close'], label='Цена закрытия (3M)', color='orange')
-    
-    # Отмечаем скип-ситуации
-    for skip in self.skip_conditions:
-        closest_date = min(recent_3m.index, key=lambda d: abs(d - skip['timestamp']))
-        ax2.scatter(closest_date, recent_3m.loc[closest_date, 'close'], 
-                   color='gray', marker='x', s=150)
+        # Отмечаем фракталы
+        bullish_fractals, bearish_fractals = self.identify_fractals(recent_1h)
         
-        # Добавляем текст с причинами
-        reasons_text = '\n'.join(skip['reasons'][:2])  # Показываем максимум 2 причины
-        ax2.annotate(reasons_text, 
-                    xy=(closest_date, recent_3m.loc[closest_date, 'close']),
-                    xytext=(10, -30),
-                    textcoords='offset points',
-                    fontsize=8,
-                    bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7))
-    
-    # Форматирование осей
-    ax1.set_title(f"Стратегия 1H3M для {self.symbol}", fontsize=16)
-    ax1.set_ylabel("Цена", fontsize=12)
-    ax1.grid(True, alpha=0.3)
-    ax1.legend(loc='upper left')
-    
-    ax2.set_title("3-минутный график", fontsize=14)
-    ax2.set_xlabel("Время", fontsize=12)
-    ax2.set_ylabel("Цена", fontsize=12)
-    ax2.grid(True, alpha=0.3)
-    ax2.legend(loc='upper left')
-    
-    # Форматирование дат на оси X
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-    
-    # Поворот меток
-    plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45)
-    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
-    
-    plt.tight_layout()
-    
-    # Сохранение графика, если указан путь
-    if save_path:
-        plt.savefig(save_path)
-        logger.info(f"График сохранен в {save_path}")
-    
-    return fig
+        for f in bullish_fractals:
+            ax1.scatter(f['timestamp'], f['price'], color='green', marker='^', s=100)
+        
+        for f in bearish_fractals:
+            ax1.scatter(f['timestamp'], f['price'], color='red', marker='v', s=100)
+        
+        # Отмечаем DL
+        if self.daily_limit:
+            ax1.axhline(y=self.daily_limit, color='purple', linestyle='--', label='Дневной лимит (DL)')
+        
+        # Отмечаем текущий контекст
+        if self.current_context:
+            context_color = 'green' if self.current_context == 'long' else 'red'
+            ax1.text(recent_1h.index[0], recent_1h['close'].min(), 
+                     f"Контекст: {self.current_context.upper()}", 
+                     color=context_color, fontsize=14)
+        
+        # Отмечаем открытые позиции
+        for pos in self.open_positions:
+            marker = '^' if pos['direction'] == 'long' else 'v'
+            color = 'green' if pos['direction'] == 'long' else 'red'
+            
+            # Находим ближайшую дату к времени входа
+            closest_date = min(recent_1h.index, key=lambda d: abs(d - pos['entry_time']))
+            
+            ax1.scatter(closest_date, pos['entry_price'], color=color, marker=marker, s=200, edgecolors='black')
+            ax1.axhline(y=pos['target'], color=color, linestyle='-.', alpha=0.7)
+            ax1.axhline(y=pos['stop_loss'], color='black', linestyle=':', alpha=0.7)
+        
+        # 3-минутный график
+        recent_3m = self.data_3m.tail(100)  # Последние 100 3-минутных свечей
+        ax2.plot(recent_3m.index, recent_3m['close'], label='Цена закрытия (3M)', color='orange')
+        
+        # Отмечаем скип-ситуации
+        for skip in self.skip_conditions:
+            closest_date = min(recent_3m.index, key=lambda d: abs(d - skip['timestamp']))
+            ax2.scatter(closest_date, recent_3m.loc[closest_date, 'close'], 
+                       color='gray', marker='x', s=150)
+            
+            # Добавляем текст с причинами
+            reasons_text = '\n'.join(skip['reasons'][:2])  # Показываем максимум 2 причины
+            ax2.annotate(reasons_text, 
+                        xy=(closest_date, recent_3m.loc[closest_date, 'close']),
+                        xytext=(10, -30),
+                        textcoords='offset points',
+                        fontsize=8,
+                        bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7))
+        
+        # Форматирование осей
+        ax1.set_title(f"Стратегия 1H3M для {self.symbol}", fontsize=16)
+        ax1.set_ylabel("Цена", fontsize=12)
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper left')
+        
+        ax2.set_title("3-минутный график", fontsize=14)
+        ax2.set_xlabel("Время", fontsize=12)
+        ax2.set_ylabel("Цена", fontsize=12)
+        ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='upper left')
+        
+        # Форматирование дат на оси X
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
+        ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        
+        # Поворот меток
+        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45)
+        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
+        
+        plt.tight_layout()
+        
+        # Сохранение графика, если указан путь
+        if save_path:
+            plt.savefig(save_path)
+            logger.info(f"График сохранен в {save_path}")
+        
+        return fig
