@@ -24,6 +24,10 @@ def print_header():
 
 def print_market_context(context):
     """Печать контекста рынка с цветовым выделением"""
+    if context is None:
+        print(f"\n{Fore.WHITE}{Style.BRIGHT}Контекст рынка: {Fore.YELLOW}Неопределен")
+        return
+    
     context_color = Fore.GREEN if context == 'long' else Fore.RED
     print(f"\n{Fore.WHITE}{Style.BRIGHT}Контекст рынка: {context_color}{context.upper()}")
 
@@ -208,7 +212,7 @@ def main():
             if bot.data_1h is None or bot.data_3m is None:
                 print(f"\n{Fore.YELLOW}Загрузка исторических данных...")
                 bot.fetch_data()
-                bot.determine_market_context()
+                bot.analyze_market_context(bot.data_3m)
                 bot.update_daily_limit()
             
             # Выводим информацию о контексте рынка
@@ -263,7 +267,7 @@ def main():
             elif choice == '1':
                 print(f"{Fore.YELLOW}Обновление данных...")
                 bot.fetch_data()
-                bot.determine_market_context()
+                bot.analyze_market_context(bot.data_3m)
                 bot.update_daily_limit()
                 bot.find_entry_points()
                 
@@ -289,7 +293,7 @@ def main():
                     bot = TradingBot1H3M(symbol=new_symbol)
                     print(f"{Fore.GREEN}Символ изменен на {new_symbol}")
                     bot.fetch_data()
-                    bot.determine_market_context()
+                    bot.analyze_market_context(bot.data_3m)
                     bot.update_daily_limit()
                 else:
                     print(f"{Fore.RED}Неподдерживаемый символ. Используйте EURUSD или GER40")

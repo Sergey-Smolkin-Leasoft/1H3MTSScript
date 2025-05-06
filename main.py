@@ -147,7 +147,14 @@ class TradingBot1H3M:
         self.ssl_bsl_removed = False
         self.poi_fvg_reacted = False
         
-        logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
+        # Получаем текущую цену EURUSD
+        try:
+            current_price = self.data_3m['close'].iloc[-1]
+            logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
+            logger.info(f"Текущая цена EURUSD: {current_price:.5f}")
+        except Exception as e:
+            logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
+            logger.warning(f"Не удалось получить текущую цену: {e}")
 
     def fetch_data(self):
         """
@@ -1047,7 +1054,8 @@ class TradingBot1H3M:
                 skip_reasons.append("Снятие DL без закрепления в шортовом контексте")
         
         # 2. Проверка, что фрактал не слишком старый (больше 2 дней)
-        if (datetime.now() - fractal['timestamp']).days > 2:
+        fractal_time = pd.to_datetime(fractal['timestamp'])
+        if (datetime.now() - fractal_time).days > 2:
             skip_reasons.append("Фрактал старше 2 дней")
         
         # 3. Проверка расстояния до цели
@@ -1434,7 +1442,7 @@ class TradingBot1H3M:
                 if bot.data_1h is None or bot.data_3m is None:
                     logging.info('Загрузка исторических данных...')
                     bot.fetch_data()
-                    bot.determine_market_context()
+                    bot.analyze_market_context(bot.data_3m)
                     bot.update_daily_limit()
                 
                 # Выводим информацию о контексте рынка
@@ -1500,7 +1508,7 @@ class TradingBot1H3M:
                     logging.info('Обновление данных')
                     print(f"{Fore.YELLOW}Обновление данных...")
                     bot.fetch_data()
-                    bot.determine_market_context()
+                    bot.analyze_market_context(bot.data_3m)
                     bot.update_daily_limit()
                     bot.find_entry_points()
                 
@@ -1530,7 +1538,7 @@ class TradingBot1H3M:
                         logging.info(f'Символ изменен на {new_symbol}')
                         print(f"{Fore.GREEN}Символ изменен на {new_symbol}")
                         bot.fetch_data()
-                        bot.determine_market_context()
+                        bot.analyze_market_context(bot.data_3m)
                         bot.update_daily_limit()
                     else:
                         logging.info('Неподдерживаемый символ')
