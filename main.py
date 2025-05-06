@@ -9,6 +9,9 @@ import logging
 from twelvedata import TDClient
 from dotenv import load_dotenv
 import os
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
+from scipy.stats import linregress
 
 # Настройка логирования
 logging.basicConfig(
@@ -88,6 +91,16 @@ class TradingBot1H3M:
         
         # Дневной лимит (DL)
         self.daily_limit = None
+        
+        # Параметры для детекции горизонтального тренда
+        self.horizontal_trend = {
+            'is_horizontal': False,
+            'confidence': 0.0,
+            'slope': 0.0,
+            'r_squared': 0.0,
+            'std_dev': 0.0,
+            'last_update': None
+        }
         
         # Текущие открытые позиции
         self.open_positions = []
@@ -194,12 +207,162 @@ class TradingBot1H3M:
         
         return df
 
+    def check_horizontal_trend(self, data, window=48):
+        """
+        Проверка на горизонтальный тренд с использованием AI
+        
+        Parameters:
+        data: DataFrame с ценовыми данными
+        window: Окно анализа (по умолчанию 48 часов)
+        
+        Returns:
+        dict: Информация о тренде
+        """
+        try:
+            # Подготовка данных
+            prices = data['close'].tail(window).values
+            time_index = np.arange(len(prices)).reshape(-1, 1)
+            
+            # Стандартизация данных
+            scaler = StandardScaler()
+            time_scaled = scaler.fit_transform(time_index)
+            prices_scaled = scaler.fit_transform(prices.reshape(-1, 1))
+            
+            # Линейная регрессия
+            model = LinearRegression()
+            model.fit(time_scaled, prices_scaled)
+            
+            # Статистический анализ
+            slope, intercept, r_value, p_value, std_err = linregress(time_index.flatten(), prices)
+            
+            # Проверка на горизонтальность
+            is_horizontal = abs(slope) < 0.001  # Небольшой порог для горизонтальности
+            confidence = 1.0 - abs(slope)  # Чем ближе к 0, тем более горизонтальный тренд
+            
+            return {
+                'is_horizontal': is_horizontal,
+                'confidence': confidence,
+                'slope': slope,
+                'r_squared': r_value**2,
+                'std_dev': std_err,
+                'p_value': p_value
+            }
+        except Exception as e:
+            logger.error(f"Ошибка при проверке горизонтального тренда: {e}")
+            return {
+                'is_horizontal': False,
+                'confidence': 0.0,
+                'slope': 0.0,
+                'r_squared': 0.0,
+                'std_dev': 0.0,
+                'p_value': 1.0
+            }
+
     def determine_market_context(self):
         """
         Определение текущего контекста рынка (лонг или шорт) на основе последних 1-2 дней
         """
         # Используем данные за последние 2 дня
-        recent_data = self.data_1h.tail(48)  # 48 часов = 2 дня
+        recent_data = self.data_1h.tail(48)
+        
+        # Проверка горизонтального тренда
+        trend_info = self.check_horizontal_trend(recent_data)
+        self.horizontal_trend.update({
+            'is_horizontal': trend_info['is_horizontal'],
+            'confidence': trend_info['confidence'],
+            'slope': trend_info['slope'],
+            'r_squared': trend_info['r_squared'],
+            'std_dev': trend_info['std_dev'],
+            'last_update': datetime.now()
+        })
+        
+        # Логирование информации о тренде
+        if trend_info['is_horizontal']:
+            logger.info(f"Обнаружен горизонтальный тренд (уверенность: {trend_info['confidence']:.2f}, R²: {trend_info['r_squared']:.2f})")
+        else:
+            logger.info(f"Тренд не горизонтальный (наклон: {trend_info['slope']:.6f}, R²: {trend_info['r_squared']:.2f})")
+        
+        # Проверка снятия SSL/BSL на разных таймфреймах
+        ssl_bsl_removed = False
+        
+        # Таймфреймы для анализа
+        timeframes = {
+            '24h': 24,  # Последние 24 часа
+            '1w': 168,  # Последняя неделя (7 дней)
+            '1m': 720   # Последний месяц (30 дней)
+        }
+        
+        # Хранилище для всех найденных SSL/BSL
+        ssl_bsl_levels = []
+        
+        for timeframe_name, timeframe_hours in timeframes.items():
+            # Получаем данные для текущего таймфрейма
+            timeframe_data = self.data_1h.tail(timeframe_hours)
+            
+            # Для шортов проверяем SSL
+            if self.current_context == 'short':
+                ssl_price = float(timeframe_data['high'].max())
+                if any(float(row['close']) > ssl_price for _, row in recent_data.iterrows()):
+                    ssl_bsl_levels.append({
+                        'type': 'SSL',
+                        'price': ssl_price,
+                        'timeframe': timeframe_name
+                    })
+            
+            # Для лонгов проверяем BSL
+            if self.current_context == 'long':
+                bsl_price = float(timeframe_data['low'].min())
+                if any(float(row['close']) < bsl_price for _, row in recent_data.iterrows()):
+                    ssl_bsl_levels.append({
+                        'type': 'BSL',
+                        'price': bsl_price,
+                        'timeframe': timeframe_name
+                    })
+        
+        # Если нашли хотя бы один SSL/BSL, считаем его снятым
+        if ssl_bsl_levels:
+            ssl_bsl_removed = True
+            for level in ssl_bsl_levels:
+                logger.info(f"{level['type']} снят на уровне {level['price']} (таймфрейм: {level['timeframe']})")
+            
+            # Определяем наиболее значимый SSL/BSL
+            if self.current_context == 'short':
+                most_significant = max(ssl_bsl_levels, key=lambda x: x['price'])
+            else:
+                most_significant = min(ssl_bsl_levels, key=lambda x: x['price'])
+            
+            logger.info(f"Наиболее значимый {most_significant['type']} на уровне {most_significant['price']} (таймфрейм: {most_significant['timeframe']})")
+        
+        # Проверка реакции от зон POI/FVG
+        poi_fvg_reacted = False
+        
+        # Находим зоны POI (последние 48 часов)
+        poi_zones = []
+        for i in range(2):  # Проверяем последние 2 дня
+            day_data = recent_data.iloc[i*24:(i+1)*24]
+            if not day_data.empty:
+                day_high = float(day_data['high'].max())
+                day_low = float(day_data['low'].min())
+                poi_zones.append((day_high, day_low))
+        
+        # Проверяем реакцию от зон POI
+        current_price = float(self.data_3m['close'].iloc[-1])
+        for high, low in poi_zones:
+            # Проверяем FVG (First Visible Gap)
+            if (current_price > high or current_price < low) and \
+               any(float(row['close']) > high or float(row['close']) < low 
+                   for _, row in recent_data.iterrows()):
+                poi_fvg_reacted = True
+                logger.info(f"Реакция от зоны POI/FVG: {high}-{low}")
+        
+        # Корректируем контекст на основе SSL/BSL и POI/FVG
+        if ssl_bsl_removed or poi_fvg_reacted:
+            if self.current_context == 'long':
+                self.current_context = 'short'
+                logger.info("Контекст изменен на шорт из-за снятия SSL/BSL или реакции POI/FVG")
+            else:
+                self.current_context = 'long'
+                logger.info("Контекст изменен на лонг из-за снятия SSL/BSL или реакции POI/FVG")  # 48 часов = 2 дня
         
         # Простая логика: если цена выше SMA 48, считаем контекст лонговым, иначе шортовым
         sma = SMAIndicator(close=recent_data['close'], window=48).sma_indicator().iloc[-1]
@@ -397,6 +560,14 @@ class TradingBot1H3M:
         Проверка скип-ситуаций, когда не следует входить в сделку
         """
         skip_reasons = []
+        
+        # Проверка горизонтального тренда
+        if self.horizontal_trend['is_horizontal'] and self.horizontal_trend['confidence'] > 0.8:
+            # Если обнаружен сильный горизонтальный тренд, пропускаем сигналы в направлении тренда
+            if self.current_context == 'long' and self.horizontal_trend['slope'] > 0:
+                skip_reasons.append("Пропуск сигнала: горизонтальный тренд с положительным наклоном")
+            elif self.current_context == 'short' and self.horizontal_trend['slope'] < 0:
+                skip_reasons.append("Пропуск сигнала: горизонтальный тренд с отрицательным наклоном")
         
         # Проверка реверсальной ситуации
         if self.reversal_state['important_target_removed']:
