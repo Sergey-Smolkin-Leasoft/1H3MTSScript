@@ -48,21 +48,6 @@ class TradingBot1H3M:
         self.db = TradingDatabase()
         
         # Настройка Twelve Data API
-        """
-        Инициализация бота
-        
-        Parameters:
-        symbol (str): Торговый символ (например, 'EURUSD', 'GER40')
-        timeframe_1h (str): Временной интервал для часового графика
-        timeframe_3m (str): Временной интервал для 3-минутного графика
-        exchange: Биржевой объект для торговли (если None, используется тестовый режим)
-        """
-        self.symbol = symbol
-        self.timeframe_1h = timeframe_1h
-        self.timeframe_3m = timeframe_3m
-        self.exchange = exchange
-        
-        # Настройка Twelve Data API
         load_dotenv()
         self.td_api_key = os.getenv('TWELVE_DATA_API_KEY', '9c614fea46d04e3d8c4f3f76b0541ab6')
         self.td = TDClient(apikey=self.td_api_key)
@@ -144,6 +129,23 @@ class TradingBot1H3M:
         
         # Текущие открытые позиции
         self.open_positions = []
+        
+        # Таймфреймы для анализа
+        self.timeframes = {
+            '24h': 24,  # Последние 24 часа
+            '1w': 168,  # Последняя неделя (7 дней)
+            '1m': 720   # Последний месяц (30 дней)
+        }
+        
+        # SSL/BSL уровни
+        self.ssl_bsl_levels = []
+        
+        # Зоны POI/FVG
+        self.poi_zones = []
+        
+        # Флаги для реакции
+        self.ssl_bsl_removed = False
+        self.poi_fvg_reacted = False
         
         logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
 
@@ -283,6 +285,8 @@ class TradingBot1H3M:
         Returns:
         dict: Информация о тренде
         """
+        try:
+            prices = data['close'].tail(window).values
             time_index = np.arange(len(prices)).reshape(-1, 1)
             
             # Стандартизация данных
@@ -320,6 +324,17 @@ class TradingBot1H3M:
                 'p_value': 1.0
             }
         
+    
+    def analyze_market_context(self, recent_data):
+        """
+        Анализ контекста рынка
+        
+        Parameters:
+        recent_data: DataFrame с последними ценовыми данными
+        """
+        # Проверка горизонтального тренда
+        trend_info = self.check_horizontal_trend(recent_data)
+        
         # Логирование информации о тренде
         if trend_info['is_horizontal']:
             logger.info(f"Обнаружен горизонтальный тренд (уверенность: {trend_info['confidence']:.2f}, R²: {trend_info['r_squared']:.2f})")
@@ -327,45 +342,55 @@ class TradingBot1H3M:
             logger.info(f"Тренд не горизонтальный (наклон: {trend_info['slope']:.6f}, R²: {trend_info['r_squared']:.2f})")
         
         # Проверка снятия SSL/BSL на разных таймфреймах
-        ssl_bsl_removed = False
+        self.ssl_bsl_removed = False
+        self.ssl_bsl_levels = []
         
-        # Таймфреймы для анализа
-        timeframes = {
-            '24h': 24,  # Последние 24 часа
-            '1w': 168,  # Последняя неделя (7 дней)
-            '1m': 720   # Последний месяц (30 дней)
-        }
+        # Проверяем SSL/BSL на разных таймфреймах
+        for timeframe_name, timeframe_hours in self.timeframes.items():
+            timeframe_data = self.data_1h.tail(timeframe_hours)
+            self.ssl_bsl_levels.extend(self.check_ssl_bsl(timeframe_data, timeframe_name))
         
-        # Хранилище для всех найденных SSL/BSL
+        # Проверяем реакцию от зон POI/FVG
+        self.check_poi_fvg(recent_data)
+        
+        # Обновляем контекст рынка
+        self.current_context = self.update_context(recent_data)
+        
+        return self.current_context
+    
+    def check_ssl_bsl(self, timeframe_data, timeframe_name):
+        """
+        Проверка SSL/BSL уровней
+        
+        Parameters:
+        timeframe_data: DataFrame с данными для проверки
+        timeframe_name: Название таймфрейма
+        """
         ssl_bsl_levels = []
         
-        for timeframe_name, timeframe_hours in timeframes.items():
-            # Получаем данные для текущего таймфрейма
-            timeframe_data = self.data_1h.tail(timeframe_hours)
-            
-            # Для шортов проверяем SSL
-            if self.current_context == 'short':
-                ssl_price = float(timeframe_data['high'].max())
-                if any(float(row['close']) > ssl_price for _, row in recent_data.iterrows()):
-                    ssl_bsl_levels.append({
-                        'type': 'SSL',
-                        'price': ssl_price,
-                        'timeframe': timeframe_name
-                    })
-            
-            # Для лонгов проверяем BSL
-            if self.current_context == 'long':
-                bsl_price = float(timeframe_data['low'].min())
-                if any(float(row['close']) < bsl_price for _, row in recent_data.iterrows()):
-                    ssl_bsl_levels.append({
-                        'type': 'BSL',
-                        'price': bsl_price,
-                        'timeframe': timeframe_name
-                    })
+        # Для шортов проверяем SSL
+        if self.current_context == 'short':
+            ssl_price = float(timeframe_data['high'].max())
+            if any(float(row['close']) > ssl_price for _, row in self.data_3m.iterrows()):
+                ssl_bsl_levels.append({
+                    'type': 'SSL',
+                    'price': ssl_price,
+                    'timeframe': timeframe_name
+                })
+        
+        # Для лонгов проверяем BSL
+        if self.current_context == 'long':
+            bsl_price = float(timeframe_data['low'].min())
+            if any(float(row['close']) < bsl_price for _, row in self.data_3m.iterrows()):
+                ssl_bsl_levels.append({
+                    'type': 'BSL',
+                    'price': bsl_price,
+                    'timeframe': timeframe_name
+                })
         
         # Если нашли хотя бы один SSL/BSL, считаем его снятым
         if ssl_bsl_levels:
-            ssl_bsl_removed = True
+            self.ssl_bsl_removed = True
             for level in ssl_bsl_levels:
                 logger.info(f"{level['type']} снят на уровне {level['price']} (таймфрейм: {level['timeframe']})")
             
@@ -377,9 +402,48 @@ class TradingBot1H3M:
             
             logger.info(f"Наиболее значимый {most_significant['type']} на уровне {most_significant['price']} (таймфрейм: {most_significant['timeframe']})")
         
-        # Проверка реакции от зон POI/FVG
-        poi_fvg_reacted = False
+        return ssl_bsl_levels
+    
+    def analyze_market_context(self, recent_data):
+        """
+        Анализ контекста рынка
         
+        Parameters:
+        recent_data: DataFrame с последними ценовыми данными
+        """
+        # Проверка горизонтального тренда
+        trend_info = self.check_horizontal_trend(recent_data)
+        
+        # Логирование информации о тренде
+        if trend_info['is_horizontal']:
+            logger.info(f"Обнаружен горизонтальный тренд (уверенность: {trend_info['confidence']:.2f}, R²: {trend_info['r_squared']:.2f})")
+        else:
+            logger.info(f"Тренд не горизонтальный (наклон: {trend_info['slope']:.6f}, R²: {trend_info['r_squared']:.2f})")
+        
+        # Проверка снятия SSL/BSL на разных таймфреймах
+        self.ssl_bsl_removed = False
+        self.ssl_bsl_levels = []
+        
+        # Проверяем SSL/BSL на разных таймфреймах
+        for timeframe_name, timeframe_hours in self.timeframes.items():
+            timeframe_data = self.data_1h.tail(timeframe_hours)
+            self.ssl_bsl_levels.extend(self.check_ssl_bsl(timeframe_data, timeframe_name))
+        
+        # Проверяем реакцию от зон POI/FVG
+        self.check_poi_fvg(recent_data)
+        
+        # Обновляем контекст рынка
+        self.current_context = self.update_context(recent_data)
+        
+        return self.current_context
+    
+    def check_poi_fvg(self, recent_data):
+        """
+        Проверка реакции от зон POI/FVG
+        
+        Parameters:
+        recent_data: DataFrame с последними ценовыми данными
+        """
         # Находим зоны POI (последние 48 часов)
         poi_zones = []
         for i in range(2):  # Проверяем последние 2 дня
@@ -394,19 +458,29 @@ class TradingBot1H3M:
         for high, low in poi_zones:
             # Проверяем FVG (First Visible Gap)
             if (current_price > high or current_price < low) and \
-               any(float(row['close']) > high or float(row['close']) < low 
-                   for _, row in recent_data.iterrows()):
-                poi_fvg_reacted = True
+                any(float(row['close']) > high or float(row['close']) < low 
+                    for _, row in self.data_3m.iterrows()):
+                self.poi_fvg_reacted = True
                 logger.info(f"Реакция от зоны POI/FVG: {high}-{low}")
+
+    def update_context(self, recent_data):
+        """
+        Обновление контекста рынка на основе цены и SMA
+        
+        Parameters:
+        recent_data: DataFrame с последними ценовыми данными
+        """
+        # Проверяем реакцию от зон POI/FVG
+        self.check_poi_fvg(recent_data)
         
         # Корректируем контекст на основе SSL/BSL и POI/FVG
-        if ssl_bsl_removed or poi_fvg_reacted:
+        if self.ssl_bsl_removed or self.poi_fvg_reacted:
             if self.current_context == 'long':
                 self.current_context = 'short'
                 logger.info("Контекст изменен на шорт из-за снятия SSL/BSL или реакции POI/FVG")
             else:
                 self.current_context = 'long'
-                logger.info("Контекст изменен на лонг из-за снятия SSL/BSL или реакции POI/FVG")  # 48 часов = 2 дня
+                logger.info("Контекст изменен на лонг из-за снятия SSL/BSL или реакции POI/FVG")
         
         # Простая логика: если цена выше SMA 48, считаем контекст лонговым, иначе шортовым
         sma = SMAIndicator(close=recent_data['close'], window=48).sma_indicator().iloc[-1]
@@ -423,6 +497,13 @@ class TradingBot1H3M:
     def identify_fractals(self, data, window=2):
         """
         Идентификация фракталов Билла Вильямса
+        
+        Parameters:
+        data: DataFrame с ценовыми данными
+        window: Окно анализа (по умолчанию 2)
+        
+        Returns:
+        tuple: (бычьи фракталы, медвежьи фракталы)
         """
         # Make sure we're accessing values properly
         highs = data['high'].values
@@ -452,51 +533,121 @@ class TradingBot1H3M:
                     'type': 'bearish'
                 })
         
-    return bullish_fractals, bearish_fractals
-    
-    """
-    Поиск точек входа на основе фракталов и 3-минутного слома
-    """
-    # Получение часовых фракталов
-    bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
-    
-    # Фильтрация фракталов по сессиям
-    frankfurt_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'frankfurt')
-    london_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'london')
-    ny_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'newyork')
-    
-    # Объединение интересующих нас фракталов
-    target_fractals = frankfurt_fractals + london_fractals + ny_fractals
-    
-    # Текущие точки набора
-    self.fractal_levels = target_fractals
-    
-    # Сбрасываем skip_conditions при каждом поиске
-    self.skip_conditions = []
-    
-    # Проверка 3-минутного слома для определения входа
-    entry_signals = []
-    
-    # Проверка времени для GER40
-    if self.symbol == 'GER40':
-        current_time = datetime.now()
-        # Проверяем, что до начала Нью-Йоркской сессии осталось больше 5 минут
-        if current_time.hour == 12 and current_time.minute >= 55:  # 12:55 - 5 минут до 13:00
-            logger.info(f"Пропуск сигнала для GER40: менее 5 минут до начала Нью-Йоркской сессии")
-            return []
-    
-    for fractal in target_fractals:
-        # Проверяем соответствие направления фрактала текущему контексту
-        valid_fractal_type = (self.current_context == 'long' and fractal['type'] == 'bullish') or \
-                            (self.current_context == 'short' and fractal['type'] == 'bearish')
+        return bullish_fractals, bearish_fractals
+    def find_entry_signals(self):
+        """
+        Поиск сигналов входа на основе фракталов и сессий
+        """
+        # Получение часовых фракталов
+        bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
         
-        if not valid_fractal_type:
-            continue
+        # Фильтрация фракталов по сессиям
+        frankfurt_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'frankfurt')
+        london_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'london')
+        ny_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'newyork')
         
-        # Проверяем слом фрактала на 3-минутном графике
-        if self.check_fractal_breakout(fractal):
-            # Проверяем скип-ситуации
-            skip_reasons = self.check_skip_conditions(fractal)
+        # Объединение интересующих нас фракталов
+        target_fractals = frankfurt_fractals + london_fractals + ny_fractals
+        
+        # Текущие точки набора
+        self.fractal_levels = target_fractals
+        
+        # Сбрасываем skip_conditions при каждом поиске
+        self.skip_conditions = []
+        
+        # Список для хранения сигналов входа
+        entry_signals = []
+        
+        # Проверка каждого фрактала на возможность входа
+        for fractal in target_fractals:
+            if self.check_skip_conditions(fractal):
+                continue
+            
+            if self.check_fractal_breakout(fractal):
+                # Проверяем скип-ситуации
+                skip_reasons = self.check_skip_conditions(fractal)
+                
+                if skip_reasons:
+                    logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']} по причинам: {', '.join(skip_reasons)}")
+                    self.skip_conditions.append({
+                        'fractal': fractal,
+                        'reasons': skip_reasons,
+                        'timestamp': datetime.now()
+                    })
+                    continue
+                
+                # Проверяем потенциальную цель
+                target = self.calculate_target(fractal)
+                if target is not None:
+                    entry_price = float(self.data_3m['close'].iloc[-1])
+                    
+                    # Рассчитываем потенциальную прибыль и убыток
+                    if self.current_context == 'long':
+                        potential_profit = target - entry_price
+                        potential_loss = entry_price - fractal['price']
+                    else:
+                        potential_profit = entry_price - target
+                        potential_loss = fractal['price'] - entry_price
+                    
+                    # Проверяем соотношение риск/прибыль
+                    if potential_profit / potential_loss >= 1.3:
+                        entry_signals.append({
+                            'fractal': fractal,
+                            'entry_price': entry_price,
+                            'stop_loss': self.calculate_stop_loss(entry_price, fractal['price']),
+                            'take_profit': target,
+                            'direction': 'long' if self.current_context == 'long' else 'short'
+                        })
+                    else:
+                        logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: RR < 1.3")
+        
+        return entry_signals
+
+    def find_entry_signals(self):
+        """
+        Поиск сигналов входа на основе фракталов и сессий
+        
+        Returns:
+        list: Список сигналов входа
+        """
+        # Получение часовых фракталов
+        bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
+        
+        # Фильтрация фракталов по сессиям
+        frankfurt_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'frankfurt')
+        london_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'london')
+        ny_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'newyork')
+        
+        # Объединение интересующих нас фракталов
+        target_fractals = frankfurt_fractals + london_fractals + ny_fractals
+        
+        # Текущие точки набора
+        self.fractal_levels = target_fractals
+        
+        # Сбрасываем skip_conditions при каждом поиске
+        self.skip_conditions = []
+        
+        # Список для хранения сигналов входа
+        entry_signals = []
+        
+        # Проверка времени для GER40
+        if self.symbol == 'GER40':
+            current_time = datetime.now()
+            # Проверяем, что до начала Нью-Йоркской сессии осталось больше 5 минут
+            if current_time.hour == 12 and current_time.minute >= 55:  # 12:55 - 5 минут до 13:00
+                logger.info(f"Пропуск сигнала для GER40: менее 5 минут до начала Нью-Йоркской сессии")
+                return []
+        
+        # Проверка каждого фрактала на возможность входа
+        for fractal in target_fractals:
+            # Проверяем соответствие направления фрактала текущему контексту
+            valid_fractal_type = (self.current_context == 'long' and fractal['type'] == 'bullish') or \
+                                (self.current_context == 'short' and fractal['type'] == 'bearish')
+            
+            if not valid_fractal_type:
+                continue
+            
+            # Проверяем слом фрактала на 3-минутном графике
             
             if skip_reasons:
                 logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']} по причинам: {', '.join(skip_reasons)}")
@@ -524,16 +675,16 @@ class TradingBot1H3M:
                 if potential_profit / potential_loss >= 1.3:
                     entry_signals.append({
                         'fractal': fractal,
-                        'target': float(target),
                         'entry_price': entry_price,
-                        'direction': self.current_context
+                        'stop_loss': self.calculate_stop_loss(entry_price, fractal['price']),
+                        'take_profit': target,
+                        'direction': 'long' if self.current_context == 'long' else 'short'
                     })
                 else:
                     logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: RR < 1.3")
+            
+        return entry_signals
     
-    return entry_signals
-   
-
     def filter_fractals_by_session(self, fractals, session_name, days_ago=0):
         """
         Фильтрация фракталов по торговой сессии
