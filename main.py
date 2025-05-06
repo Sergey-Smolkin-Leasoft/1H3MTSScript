@@ -51,6 +51,8 @@ class TradingBot1H3M:
         # Маппинг символов для Twelve Data
         self.symbol_mapping = {
             'EURUSD': 'EUR/USD',
+            'GBPUSD': 'GBP/USD',
+            'XAUUSD': 'XAU/USD',
             'GER40': 'DAX'
         }
         
@@ -58,6 +60,12 @@ class TradingBot1H3M:
         if symbol == 'EURUSD':
             self.max_target_points = 250
             self.point_size = 0.0001
+        elif symbol == 'GBPUSD':
+            self.max_target_points = 200
+            self.point_size = 0.0001
+        elif symbol == 'XAUUSD':
+            self.max_target_points = 200
+            self.point_size = 0.1
         elif symbol == 'GER40':
             self.max_target_points = 400
             self.point_size = 1
@@ -111,6 +119,9 @@ class TradingBot1H3M:
             'std_dev': 0.0,
             'last_update': None
         }
+        
+        # Текущая волатильность
+        self.current_volatility = None
         
         # Текущие открытые позиции
         self.open_positions = []
@@ -217,6 +228,31 @@ class TradingBot1H3M:
         
         return df
 
+    def calculate_volatility(self, data, period=14):
+        """
+        Расчет волатильности (ATR) для инструмента
+        
+        Parameters:
+        data: DataFrame с ценовыми данными
+        period: Период расчета ATR (по умолчанию 14)
+        
+        Returns:
+        float: Текущая волатильность
+        """
+        high = data['high']
+        low = data['low']
+        close = data['close']
+        
+        tr1 = high - low
+        tr2 = abs(high - close.shift())
+        tr3 = abs(low - close.shift())
+        
+        tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+        
+        atr = tr.rolling(window=period).mean()
+        
+        return atr.iloc[-1]
+
     def check_horizontal_trend(self, data, window=48):
         """
         Проверка на горизонтальный тренд с использованием AI
@@ -228,9 +264,6 @@ class TradingBot1H3M:
         Returns:
         dict: Информация о тренде
         """
-        try:
-            # Подготовка данных
-            prices = data['close'].tail(window).values
             time_index = np.arange(len(prices)).reshape(-1, 1)
             
             # Стандартизация данных
@@ -397,6 +430,11 @@ class TradingBot1H3M:
                 bearish_fractals.append({
                     'timestamp': timestamps[i],
                     'price': float(highs[i]),
+                    'type': 'bearish'
+                })
+        
+    return bullish_fractals, bearish_fractals
+    
     """
     Поиск точек входа на основе фракталов и 3-минутного слома
     """
@@ -503,18 +541,15 @@ class TradingBot1H3M:
 
     def check_fractal_breakout(self, fractal):
         """
-        Проверка пробоя фрактала на 3-минутном графике
+        Проверка пробоя фрактала на 3-минутном графике с учетом типа фрактала
         """
-        # Получаем последние 3-минутные свечи
-        recent_3m = self.data_3m.tail(20)  # Берем несколько последних свечей
-        fractal_price = float(fractal['price'])
+        # Получаем текущие цены
+        current_high = self.data_3m['high'].iloc[-1]
+        current_low = self.data_3m['low'].iloc[-1]
         
-        # Находим последний локальный экстремум
-        last_high = recent_3m['high'].max()
-        last_low = recent_3m['low'].min()
-        
-        # Проверяем, является ли последний экстремум точкой пробоя
-        if self.current_context == 'long':
+        # Проверяем пробой с учетом типа фрактала
+        if fractal['type'] == 'bullish':
+            return current_high > fractal['price']
             if fractal['type'] == 'bullish':
                 # Для лонга проверяем, что последний максимум пробил фрактал
                 return last_high > fractal_price and \
@@ -913,23 +948,34 @@ class TradingBot1H3M:
         logger.debug(f"Calculated distance: {distance}, type: {type(distance)}")
         return float(abs(distance))
 
+    def calculate_stop_loss(self, entry_price, fractal_price):
+        """
+        Расчет стоп-лосса с учетом волатильности инструмента
+        """
+        # Рассчитываем текущую волатильность
+        volatility = self.calculate_volatility(self.data_3m)
+        
+        # Определяем расстояние для стопа в зависимости от инструмента
+        if self.symbol == 'XAUUSD':
+            stop_distance = volatility * 2  # 2 ATR для золота
+        elif self.symbol in ['EURUSD', 'GBPUSD']:
+            stop_distance = volatility * 1.5  # 1.5 ATR для валют
+        else:
+            stop_distance = volatility * 2  # 2 ATR для GER40
+        
+        if self.current_context == 'long':
+            return entry_price - stop_distance
+        else:
+            return entry_price + stop_distance
+
     def calculate_target(self, fractal):
         """
         Расчет целевого уровня для позиции
         """
-        current_price = self.data_3m['close'].iloc[-1]
-        
-        if self.current_context == 'long':
-            # Находим локальный максимум в пределах допустимого расстояния
-            max_target = current_price + (self.max_target_points * self.point_size)
-            recent_highs = self.data_1h['high'].tail(48)  # Последние 2 дня
+        if fractal is None:
+            return None
             
-            # Фильтруем максимумы, которые находятся в пределах допустимого расстояния
-            valid_highs = recent_highs[recent_highs.astype(float) <= max_target]
-            
-            if not valid_highs.empty:
-                return valid_highs.max()
-        else:
+        # Определяем направление
             # Находим локальный минимум в пределах допустимого расстояния
             min_target = current_price - (self.max_target_points * self.point_size)
             recent_lows = self.data_1h['low'].tail(48)  # Последние 2 дня
@@ -1013,26 +1059,39 @@ class TradingBot1H3M:
             logger.info(f"[ТЕСТ] Открыта позиция: {direction} по {entry_price}, цель: {target_price}, стоп: {stop_loss}")
             return True
 
-    def calculate_position_size(self, entry_price, stop_loss, risk_amount):
+    def calculate_position_size(self, entry_price, stop_loss, risk_amount=0.01):
         """
-        Расчет размера позиции на основе риска
+        Расчет размера позиции на основе риска с учетом инструмента
         """
         if self.exchange:
             # Получение баланса аккаунта
             balance = self.exchange.fetch_balance()
-            total_balance = balance['total']['USD']  # Предполагаем, что баланс в USD
+            total_balance = balance['total']['USD']
             
             # Сумма риска
             risk_in_currency = total_balance * risk_amount
             
-            # Расчет размера позиции
+            # Расчет размера позиции с учетом волатильности
             pip_risk = abs(entry_price - stop_loss) / self.point_size
             position_size = risk_in_currency / pip_risk
             
+            # Ограничение максимального размера позиции
+            if self.symbol == 'XAUUSD':
+                position_size = min(position_size, 100)  # Максимум 100 контрактов для золота
+            elif self.symbol in ['EURUSD', 'GBPUSD']:
+                position_size = min(position_size, 1000)  # Максимум 1000 контрактов для валют
+            else:
+                position_size = min(position_size, 100)  # Максимум 100 контрактов для GER40
+            
             return position_size
         else:
-            # В тестовом режиме возвращаем фиксированный размер
-            return 1.0
+            # В тестовом режиме используем адекватный размер
+            if self.symbol == 'XAUUSD':
+                return 10.0
+            elif self.symbol in ['EURUSD', 'GBPUSD']:
+                return 100.0
+            else:
+                return 10.0
 
     def manage_open_positions(self):
         """
