@@ -78,6 +78,14 @@ class TradingBot1H3M:
         self.fractal_levels = []
         self.skip_conditions = []
         
+        # Состояние реверсала
+        self.reversal_state = {
+            'confirmed_swipes': 0,  # Количество подтвержденных свипов
+            'last_swipe_session': None,  # Последняя сессия свипа
+            'important_target_removed': False,  # Флаг снятия важного таргета
+            'last_liquidity_pool': None  # Последний большой пул ликвидности
+        }
+        
         # Дневной лимит (DL)
         self.daily_limit = None
         
@@ -364,11 +372,72 @@ class TradingBot1H3M:
         
         return False
 
+    def check_liquidity_swipe(self, session_name):
+        """
+        Проверка свипа ликвидности в указанной сессии
+        """
+        recent_3m = self.data_3m.tail(20)
+        session_start, session_end = self.sessions[session_name]
+        
+        # Проверяем свип ликвидности в текущей сессии
+        session_candles = recent_3m[(recent_3m.index.hour >= session_start) & 
+                                  (recent_3m.index.hour < session_end)]
+        
+        if len(session_candles) < 2:
+            return False
+            
+        # Проверяем наличие свипа (резкое движение в одну сторону)
+        price_range = float(session_candles['high'].max()) - float(session_candles['low'].min())
+        avg_range = float(recent_3m['high'] - recent_3m['low']).mean()
+        
+        return price_range > 2 * avg_range
+
     def check_skip_conditions(self, fractal):
         """
         Проверка скип-ситуаций, когда не следует входить в сделку
         """
         skip_reasons = []
+        
+        # Проверка реверсальной ситуации
+        if self.reversal_state['important_target_removed']:
+            # Проверяем свип ликвидности слева
+            if self.reversal_state['confirmed_swipes'] < 2:
+                # Проверяем свип в европейской сессии
+                if self.check_liquidity_swipe('frankfurt') or self.check_liquidity_swipe('london'):
+                    self.reversal_state['confirmed_swipes'] += 1
+                    self.reversal_state['last_swipe_session'] = 'european'
+                
+                # Если Азия поработала с ликвидностью дважды, считаем это одним подтверждением
+                if self.check_liquidity_swipe('asia'):
+                    self.reversal_state['confirmed_swipes'] += 1
+                    self.reversal_state['last_swipe_session'] = 'asia'
+            
+            # Если у нас два подтверждения, проверяем условия для реверса
+            if self.reversal_state['confirmed_swipes'] >= 2:
+                # Проверяем, нет ли целей выше/ниже
+                current_price = float(self.data_3m['close'].iloc[-1])
+                if self.current_context == 'long':
+                    recent_lows = self.data_1h['low'].tail(48)
+                    if any(float(low) < current_price for low in recent_lows):
+                        skip_reasons.append("Есть таргет ниже")
+                else:
+                    recent_highs = self.data_1h['high'].tail(48)
+                    if any(float(high) > current_price for high in recent_highs):
+                        skip_reasons.append("Есть таргет выше")
+                        
+                # Проверяем противостоящую ОФ
+                if self.current_context == 'long' and self.check_liquidity_swipe('newyork'):
+                    skip_reasons.append("Против ОФ")
+                
+                # Проверяем PWH/PWL
+                if self.current_context == 'long':
+                    recent_highs = self.data_1h['high'].tail(48)
+                    if any(float(high) > current_price for high in recent_highs):
+                        skip_reasons.append("Есть PWH")
+                else:
+                    recent_lows = self.data_1h['low'].tail(48)
+                    if any(float(low) < current_price for low in recent_lows):
+                        skip_reasons.append("Есть PWL")
         
         # 1. Проверка снятия DL без закрепления в шортовом контексте
         if self.current_context == 'short' and self.daily_limit is not None:
@@ -409,12 +478,15 @@ class TradingBot1H3M:
                 frankfurt_candle = recent_3m[(recent_3m.index.hour == frankfurt_end) & 
                                           (recent_3m.index.minute < 30)].iloc[-1]
                 
-                # Находим первую свечу Лондонской сессии
-                london_candle = recent_3m[(recent_3m.index.hour == london_start) & 
-                                        (recent_3m.index.minute >= 30)].iloc[0]
+                # Находим все свечи Лондонской сессии
+                london_candles = recent_3m[(recent_3m.index.hour >= london_start) & 
+                                         (recent_3m.index.hour < london_start + 1)]
                 
-                # Проверяем, что Лондонская сессия сняла Франкфуртскую
-                if float(london_candle['low']) < float(frankfurt_candle['low']):
+                # Проверяем, есть ли хотя бы одна свеча Лондонской сессии, которая сняла Франкфуртскую
+                frankfurt_low = float(frankfurt_candle['low'])
+                london_break = any(float(candle['low']) < frankfurt_low for _, candle in london_candles.iterrows())
+                
+                if london_break:
                     # Проверяем 3м слом
                     if self.check_fractal_breakout(fractal):
                         skip_reasons.append("Frankfurt manipulation setup")
