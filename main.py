@@ -81,6 +81,16 @@ class TradingBot1H3M:
         self.fractal_levels = []
         self.skip_conditions = []
         
+        # Состояния цены
+        self.price_context = None  # Текущее состояние цены
+        self.price_context_states = {
+            'CLEAR_TREND': 'Четкое направление с Order Flow',
+            'INEFFICIENT_DELIVERY': 'Неэффективная доставка без Order Flow',
+            'TARGET_APPROACH': 'Приход к таргету',
+            'HORIZONTAL_TREND': 'Горизонтальный тренд',
+            'CORRECTION': 'Коррекция'
+        }
+        
         # Состояние реверсала
         self.reversal_state = {
             'confirmed_swipes': 0,  # Количество подтвержденных свипов
@@ -257,24 +267,6 @@ class TradingBot1H3M:
                 'std_dev': 0.0,
                 'p_value': 1.0
             }
-
-    def determine_market_context(self):
-        """
-        Определение текущего контекста рынка (лонг или шорт) на основе последних 1-2 дней
-        """
-        # Используем данные за последние 2 дня
-        recent_data = self.data_1h.tail(48)
-        
-        # Проверка горизонтального тренда
-        trend_info = self.check_horizontal_trend(recent_data)
-        self.horizontal_trend.update({
-            'is_horizontal': trend_info['is_horizontal'],
-            'confidence': trend_info['confidence'],
-            'slope': trend_info['slope'],
-            'r_squared': trend_info['r_squared'],
-            'std_dev': trend_info['std_dev'],
-            'last_update': datetime.now()
-        })
         
         # Логирование информации о тренде
         if trend_info['is_horizontal']:
@@ -555,13 +547,120 @@ class TradingBot1H3M:
         
         return price_range > 2 * avg_range
 
+    def check_price_context(self, data_3m):
+        """
+        Определяет текущее состояние цены
+        """
+        # Проверяем четкое направление с Order Flow
+        if self.is_clear_trend(data_3m):
+            self.price_context = self.price_context_states['CLEAR_TREND']
+            return
+            
+        # Проверяем неэффективную доставку без Order Flow
+        if self.is_inefficient_delivery(data_3m):
+            self.price_context = self.price_context_states['INEFFICIENT_DELIVERY']
+            return
+            
+        # Проверяем приход к таргету
+        if self.is_target_approach(data_3m):
+            self.price_context = self.price_context_states['TARGET_APPROACH']
+            return
+            
+        # Проверяем горизонтальный тренд
+        if self.is_horizontal_trend(data_3m):
+            self.price_context = self.price_context_states['HORIZONTAL_TREND']
+            return
+            
+        # По умолчанию считаем это коррекцией
+        self.price_context = self.price_context_states['CORRECTION']
+
+    def is_clear_trend(self, data_3m):
+        """
+        Проверяет наличие четкого направления с Order Flow
+        """
+        # Проверяем силу тренда
+        last_candle = data_3m.iloc[-1]
+        prev_candle = data_3m.iloc[-2]
+        
+        # Проверяем Order Flow
+        volume_increase = last_candle['volume'] > prev_candle['volume'] * 1.5
+        price_momentum = abs(last_candle['close'] - last_candle['open']) > abs(prev_candle['close'] - prev_candle['open']) * 1.2
+        
+        # Проверяем угол наклона тренда
+        price_changes = data_3m['close'].pct_change().dropna()
+        angle = np.degrees(np.arctan(price_changes.mean()))
+        
+        # Четкий тренд: сильный Order Flow и угол наклона более 15 градусов
+        return volume_increase and price_momentum and abs(angle) > 15
+
+    def is_inefficient_delivery(self, data_3m):
+        """
+        Проверяет наличие неэффективной доставки без Order Flow
+        """
+        # Проверяем объемы
+        last_candle = data_3m.iloc[-1]
+        prev_candle = data_3m.iloc[-2]
+        
+        # Проверяем паттерны ценового движения
+        price_range = abs(last_candle['high'] - last_candle['low'])
+        body_size = abs(last_candle['close'] - last_candle['open'])
+        
+        # Неэффективная доставка: маленький объем при большом ценовом диапазоне
+        return (last_candle['volume'] < prev_candle['volume'] * 0.8 and 
+                price_range > body_size * 2)
+
+    def is_target_approach(self, data_3m):
+        """
+        Проверяет приближение к таргету
+        """
+        last_candle = data_3m.iloc[-1]
+        
+        # Проверяем структуру свечи
+        body_size = abs(last_candle['close'] - last_candle['open'])
+        wick_size = abs(last_candle['high'] - last_candle['low'])
+        
+        # Приход к таргету: большая тень при маленьком теле
+        if wick_size > body_size * 2:
+            # Проверяем направление
+            if last_candle['close'] > last_candle['open']:
+                # Бычья свеча с большой нижней тенью
+                return True
+            else:
+                # Медвежья свеча с большой верхней тенью
+                return True
+        
+        return False
+
+    def is_horizontal_trend(self, data_3m):
+        """
+        Проверяет наличие горизонтального тренда
+        """
+        # Проверяем стандартное отклонение
+        price_std = data_3m['close'].std()
+        
+        # Проверяем угол наклона
+        price_changes = data_3m['close'].pct_change().dropna()
+        angle = np.degrees(np.arctan(price_changes.mean()))
+        
+        # Горизонтальный тренд: маленькое стандартное отклонение и небольшой угол
+        is_horizontal = (price_std < 0.001 and abs(angle) < 5)
+        
+        # Обновляем параметры горизонтального тренда
+        self.horizontal_trend['is_horizontal'] = is_horizontal
+        self.horizontal_trend['confidence'] = 1.0 - abs(angle) / 5
+        self.horizontal_trend['slope'] = angle
+        self.horizontal_trend['std_dev'] = price_std
+        self.horizontal_trend['last_update'] = datetime.utcnow()
+        
+        return is_horizontal
+
     def check_skip_conditions(self, fractal):
         """
         Проверка скип-ситуаций, когда не следует входить в сделку
         """
         skip_reasons = []
         
-        # Проверка горизонтального тренда
+        # Проверяем горизонтальный тренд
         if self.horizontal_trend['is_horizontal'] and self.horizontal_trend['confidence'] > 0.8:
             # Если обнаружен сильный горизонтальный тренд, пропускаем сигналы в направлении тренда
             if self.current_context == 'long' and self.horizontal_trend['slope'] > 0:
@@ -569,7 +668,7 @@ class TradingBot1H3M:
             elif self.current_context == 'short' and self.horizontal_trend['slope'] < 0:
                 skip_reasons.append("Пропуск сигнала: горизонтальный тренд с отрицательным наклоном")
         
-        # Проверка реверсальной ситуации
+        # Проверяем реверсальную ситуацию
         if self.reversal_state['important_target_removed']:
             # Проверяем свип ликвидности слева
             if self.reversal_state['confirmed_swipes'] < 2:
