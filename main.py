@@ -549,7 +549,7 @@ class TradingBot1H3M:
 
     def check_price_context(self, data_3m):
         """
-        Определяет текущее состояние цены
+        Определяет текущее состояние цены с учетом азиатской сессии
         """
         # Проверяем четкое направление с Order Flow
         if self.is_clear_trend(data_3m):
@@ -571,8 +571,128 @@ class TradingBot1H3M:
             self.price_context = self.price_context_states['HORIZONTAL_TREND']
             return
             
+        # Проверяем состояние азиатской сессии
+        if self.is_asian_session_active():
+            asian_context = self.analyze_asian_session(data_3m)
+            if asian_context:
+                self.price_context = asian_context
+                return
+            
         # По умолчанию считаем это коррекцией
         self.price_context = self.price_context_states['CORRECTION']
+
+    def is_asian_session_active(self):
+        """
+        Проверяет наличие четкого направления в азиатской сессии
+        """
+        # Проверяем, что мы в азиатской сессии
+        current_hour = datetime.utcnow().hour
+        if current_hour not in self.sessions['asia'].values():
+            return False
+            
+        # Получаем данные за азиатскую сессию
+        asian_data = self.get_asian_session_data(self.data_3m)
+        
+        # Проверяем четкое направление
+        return self.has_clear_asian_direction(asian_data)
+
+    def analyze_asian_session(self, data_3m):
+        """
+        Анализирует поведение азиатской сессии
+        """
+        # Получаем данные за азиатскую сессию
+        asian_data = self.get_asian_session_data(data_3m)
+        
+        # Проверяем четкое направление Азии
+        if self.has_clear_asian_direction(asian_data):
+            return self.price_context_states['CLEAR_TREND']
+            
+        # Проверяем закрепление АХ/АЛ
+        if self.is_asian_hl_confirmation(asian_data):
+            return self.price_context_states['CLEAR_TREND']
+            
+        # Проверяем свип против тренда
+        if self.is_asian_counter_trend_swipe(asian_data):
+            return self.price_context_states['INEFFICIENT_DELIVERY']
+            
+        return None
+
+    def get_asian_session_data(self, data_3m):
+        """
+        Получает данные за азиатскую сессию
+        """
+        # Берем последние 2 часа данных (с запасом)
+        return data_3m.tail(40)  # 40 свечей по 3 минуты = 2 часа
+
+    def has_clear_asian_direction(self, asian_data):
+        """
+        Проверяет наличие четкого направления в азиатской сессии
+        """
+        # Проверяем угол наклона тренда
+        price_changes = asian_data['close'].pct_change().dropna()
+        angle = np.degrees(np.arctan(price_changes.mean()))
+        
+        # Проверяем объемы
+        avg_volume = asian_data['volume'].mean()
+        last_volume = asian_data['volume'].iloc[-1]
+        
+        # Четкое направление: угол > 10 градусов и объем выше среднего
+        return abs(angle) > 10 and last_volume > avg_volume * 1.2
+
+    def is_asian_hl_confirmation(self, asian_data):
+        """
+        Проверяет закрепление АХ/АЛ
+        """
+        last_candle = asian_data.iloc[-1]
+        prev_candle = asian_data.iloc[-2]
+        
+        # Закрепление АХ: последняя свеча выше предыдущей
+        is_hl_confirmation = (
+            (last_candle['high'] > prev_candle['high'] and 
+             last_candle['low'] > prev_candle['low']) or
+            (last_candle['low'] < prev_candle['low'] and 
+             last_candle['high'] < prev_candle['high'])
+        )
+        
+        return is_hl_confirmation
+
+    def is_asian_counter_trend_swipe(self, asian_data):
+        """
+        Проверяет наличие свипа против тренда в азиатской сессии
+        """
+        # Проверяем глобальный тренд
+        global_trend = self.get_global_trend(data_3m)
+        
+        # Проверяем последнюю свечу на свип
+        last_candle = asian_data.iloc[-1]
+        prev_candle = asian_data.iloc[-2]
+        
+        # Свип против тренда: большая тень в противоположном направлении
+        if global_trend == 'up':
+            return last_candle['high'] > prev_candle['high'] * 1.01 and \
+                   abs(last_candle['high'] - last_candle['close']) > abs(last_candle['open'] - last_candle['close']) * 2
+        else:
+            return last_candle['low'] < prev_candle['low'] * 0.99 and \
+                   abs(last_candle['low'] - last_candle['close']) > abs(last_candle['open'] - last_candle['close']) * 2
+
+    def get_global_trend(self, data_3m):
+        """
+        Определяет глобальный тренд на основе данных
+        """
+        # Берем последние 100 свечей для анализа тренда
+        trend_data = data_3m.tail(100)
+        
+        # Проверяем угол наклона тренда
+        price_changes = trend_data['close'].pct_change().dropna()
+        angle = np.degrees(np.arctan(price_changes.mean()))
+        
+        # Определяем тренд
+        if angle > 5:
+            return 'up'
+        elif angle < -5:
+            return 'down'
+        else:
+            return 'sideways'
 
     def is_clear_trend(self, data_3m):
         """
