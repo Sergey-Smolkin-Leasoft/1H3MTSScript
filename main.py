@@ -28,6 +28,12 @@ class TradingBot1H3M:
     def __init__(self, symbol, timeframe_1h='1h', timeframe_3m='3m', exchange=None):
         """
         Инициализация бота
+        
+        Parameters:
+        symbol (str): Торговый символ (например, 'EURUSD', 'GER40')
+        timeframe_1h (str): Временной интервал для часового графика
+        timeframe_3m (str): Временной интервал для 3-минутного графика
+        exchange: Биржевой объект для торговли (если None, используется тестовый режим)
         """
         self.symbol = symbol
         self.timeframe_1h = timeframe_1h
@@ -47,11 +53,11 @@ class TradingBot1H3M:
         
         # Настройки инструментов
         if symbol == 'EURUSD':
-            self.max_target_points = 250.0
+            self.max_target_points = 250
             self.point_size = 0.0001
         elif symbol == 'GER40':
-            self.max_target_points = 400.0
-            self.point_size = 1.0
+            self.max_target_points = 400
+            self.point_size = 1
         else:
             raise ValueError(f"Неподдерживаемый символ: {symbol}")
         
@@ -61,10 +67,10 @@ class TradingBot1H3M:
         
         # Информация о сессиях
         self.sessions = {
-            'asia': (1, 9),          # 01:00-09:00 UTC
-            'london': (8, 16),       # 08:00-16:00 UTC
-            'newyork': (13, 21),     # 13:00-21:00 UTC
-            'frankfurt': (7, 15)     # 07:00-15:00 UTC
+            'asia': {'start': 1, 'end': 9},          # 01:00-09:00 UTC
+            'london': {'start': 8, 'end': 16},       # 08:00-16:00 UTC
+            'newyork': {'start': 13, 'end': 21},     # 13:00-21:00 UTC
+            'frankfurt': {'start': 7, 'end': 15}     # 07:00-15:00 UTC
         }
         
         # Текущие сигналы
@@ -86,25 +92,12 @@ class TradingBot1H3M:
         """
         if self.exchange:
             # Реальные данные с биржи
-            try:
-                self.data_1h = self.fetch_historical_data(self.timeframe_1h)
-                self.data_3m = self.fetch_historical_data(self.timeframe_3m)
-            except Exception as e:
-                logger.error(f"Ошибка при загрузке данных с биржи: {e}")
-                # Если не удалось загрузить данные, используем тестовые
-                self.data_1h = self.generate_test_data(self.timeframe_1h)
-                self.data_3m = self.generate_test_data(self.timeframe_3m)
+            self.data_1h = self.fetch_historical_data(self.timeframe_1h)
+            self.data_3m = self.fetch_historical_data(self.timeframe_3m)
         else:
             # Тестовые данные для разработки
             self.data_1h = self.generate_test_data(self.timeframe_1h)
             self.data_3m = self.generate_test_data(self.timeframe_3m)
-        
-        # Преобразуем все числовые столбцы в float
-        for col in ['open', 'high', 'low', 'close', 'volume']:
-            if col in self.data_1h.columns:
-                self.data_1h[col] = pd.to_numeric(self.data_1h[col], errors='coerce')
-            if col in self.data_3m.columns:
-                self.data_3m[col] = pd.to_numeric(self.data_3m[col], errors='coerce')
         
         logger.info(f"Данные загружены: {len(self.data_1h)} часовых свечей, {len(self.data_3m)} 3-минутных свечей")
 
@@ -114,14 +107,14 @@ class TradingBot1H3M:
         """
         # Преобразуем временной интервал для Twelve Data
         td_timeframe = {
-            '1h': '1h',
-            '3m': '3min'
-        }.get(timeframe, timeframe)
+            '1h': '1H',
+            '3m': '3M'
+        }[timeframe]
         
         # Получаем данные
         try:
             ts = self.td.time_series(
-                symbol=self.symbol_mapping.get(self.symbol, self.symbol),
+                symbol=self.symbol_mapping[self.symbol],
                 interval=td_timeframe,
                 outputsize=limit,
                 timezone='UTC'
@@ -137,11 +130,6 @@ class TradingBot1H3M:
                 'close': 'close',
                 'volume': 'volume'
             })
-            
-            # Убедимся, что все данные имеют правильный тип
-            for col in ['open', 'high', 'low', 'close', 'volume']:
-                if col in data.columns:
-                    data[col] = pd.to_numeric(data[col], errors='coerce')
             
             data['timestamp'] = pd.to_datetime(data['timestamp'])
             data.set_index('timestamp', inplace=True)
@@ -171,7 +159,7 @@ class TradingBot1H3M:
         
         # Генерация случайных данных с небольшим трендом
         np.random.seed(42)
-        base_price = 1.1000 if self.symbol == 'EURUSD' else 15000.0  # Базовая цена
+        base_price = 1.1000 if self.symbol == 'EURUSD' else 15000  # Базовая цена
         trend = np.cumsum(np.random.normal(0, 0.0002 if self.symbol == 'EURUSD' else 5, len(dates)))
         noise = np.random.normal(0, 0.0005 if self.symbol == 'EURUSD' else 15, len(dates))
         
@@ -209,7 +197,7 @@ class TradingBot1H3M:
         sma = SMAIndicator(close=recent_data['close'], window=48).sma_indicator().iloc[-1]
         current_price = recent_data['close'].iloc[-1]
         
-        if float(current_price) > float(sma):
+        if current_price > sma:
             self.current_context = 'long'
         else:
             self.current_context = 'short'
@@ -221,6 +209,7 @@ class TradingBot1H3M:
         """
         Идентификация фракталов Билла Вильямса
         """
+        # Make sure we're accessing values properly
         highs = data['high'].values
         lows = data['low'].values
         timestamps = data.index
@@ -231,7 +220,7 @@ class TradingBot1H3M:
         # Поиск бычьих фракталов (дно)
         for i in range(window, len(data) - window):
             if all(float(lows[i]) < float(lows[i-j]) for j in range(1, window+1)) and \
-               all(float(lows[i]) < float(lows[i+j]) for j in range(1, window+1)):
+            all(float(lows[i]) < float(lows[i+j]) for j in range(1, window+1)):
                 bullish_fractals.append({
                     'timestamp': timestamps[i],
                     'price': float(lows[i]),
@@ -241,7 +230,7 @@ class TradingBot1H3M:
         # Поиск медвежьих фракталов (вершина)
         for i in range(window, len(data) - window):
             if all(float(highs[i]) > float(highs[i-j]) for j in range(1, window+1)) and \
-               all(float(highs[i]) > float(highs[i+j]) for j in range(1, window+1)):
+            all(float(highs[i]) > float(highs[i+j]) for j in range(1, window+1)):
                 bearish_fractals.append({
                     'timestamp': timestamps[i],
                     'price': float(highs[i]),
@@ -250,64 +239,65 @@ class TradingBot1H3M:
         
         return bullish_fractals, bearish_fractals
 
-    def find_entry_points(self):
-        """
-        Поиск точек входа на основе фракталов и 3-минутного слома
-        """
-        # Получение часовых фракталов
-        bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
+def find_entry_points(self):
+    """
+    Поиск точек входа на основе фракталов и 3-минутного слома
+    """
+    # Получение часовых фракталов
+    bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
+    
+    # Фильтрация фракталов по сессиям
+    asia_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'asia')
+    ny_fractals_yesterday = self.filter_fractals_by_session(
+        bullish_fractals_1h + bearish_fractals_1h, 'newyork', days_ago=1
+    )
+    
+    # Объединение интересующих нас фракталов
+    target_fractals = asia_fractals + ny_fractals_yesterday
+    
+    # Текущие точки набора
+    self.fractal_levels = target_fractals
+    
+    # Сбрасываем skip_conditions при каждом поиске
+    self.skip_conditions = []
+    
+    # Проверка 3-минутного слома для определения входа
+    entry_signals = []
+    
+    for fractal in target_fractals:
+        # Проверяем соответствие направления фрактала текущему контексту
+        valid_fractal_type = (self.current_context == 'long' and fractal['type'] == 'bullish') or \
+                            (self.current_context == 'short' and fractal['type'] == 'bearish')
         
-        # Фильтрация фракталов по сессиям
-        asia_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'asia')
-        ny_fractals_yesterday = self.filter_fractals_by_session(
-            bullish_fractals_1h + bearish_fractals_1h, 'newyork', days_ago=1
-        )
+        if not valid_fractal_type:
+            continue
         
-        # Объединение интересующих нас фракталов
-        target_fractals = asia_fractals + ny_fractals_yesterday
-        
-        # Текущие точки набора
-        self.fractal_levels = target_fractals
-        
-        # Сбрасываем skip_conditions при каждом поиске
-        self.skip_conditions = []
-        
-        # Проверка 3-минутного слома для определения входа
-        entry_signals = []
-        
-        for fractal in target_fractals:
-            # Проверяем соответствие направления фрактала текущему контексту
-            valid_fractal_type = (self.current_context == 'long' and fractal['type'] == 'bullish') or \
-                                (self.current_context == 'short' and fractal['type'] == 'bearish')
+        # Проверяем слом фрактала на 3-минутном графике
+        if self.check_fractal_breakout(fractal):
+            # Проверяем скип-ситуации
+            skip_reasons = self.check_skip_conditions(fractal)
             
-            if not valid_fractal_type:
+            if skip_reasons:
+                logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']} по причинам: {', '.join(skip_reasons)}")
+                self.skip_conditions.append({
+                    'fractal': fractal,
+                    'reasons': skip_reasons,
+                    'timestamp': datetime.now()
+                })
                 continue
             
-            # Проверяем слом фрактала на 3-минутном графике
-            if self.check_fractal_breakout(fractal):
-                # Проверяем скип-ситуации
-                skip_reasons = self.check_skip_conditions(fractal)
-                
-                if skip_reasons:
-                    logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']} по причинам: {', '.join(skip_reasons)}")
-                    self.skip_conditions.append({
-                        'fractal': fractal,
-                        'reasons': skip_reasons,
-                        'timestamp': datetime.now()
-                    })
-                    continue
-                
-                # Проверяем потенциальную цель
-                target = self.calculate_target(fractal)
-                if target is not None:
-                    entry_signals.append({
-                        'fractal': fractal,
-                        'target': float(target),
-                        'entry_price': float(self.data_3m['close'].iloc[-1]),
-                        'direction': self.current_context
-                    })
-        
-        return entry_signals
+            # Проверяем потенциальную цель
+            target = self.calculate_target(fractal)
+            if target is not None:
+                entry_signals.append({
+                    'fractal': fractal,
+                    'target': float(target),
+                    'entry_price': float(self.data_3m['close'].iloc[-1]),
+                    'direction': self.current_context
+                })
+    
+    return entry_signals
+   
 
     def filter_fractals_by_session(self, fractals, session_name, days_ago=0):
         """
@@ -316,6 +306,7 @@ class TradingBot1H3M:
         filtered_fractals = []
         session_start, session_end = self.sessions[session_name]
         
+        # Make sure we're getting the right number of values here
         for fractal in fractals:
             timestamp = fractal['timestamp']
             
@@ -331,23 +322,23 @@ class TradingBot1H3M:
         
         return filtered_fractals
 
+
     def check_fractal_breakout(self, fractal):
-        """
-        Проверка слома фрактала на 3-минутном графике
-        """
-        # Получаем последние 3-минутные свечи
+    # Получаем последние 3-минутные свечи
         recent_3m = self.data_3m.tail(20)  # Берем несколько последних свечей
         fractal_price = float(fractal['price'])
-        
+    
         if self.current_context == 'long':
-            # Для лонга ищем пробой бычьего фрактала вверх
+        # Для лонга ищем пробой бычьего фрактала вверх
             if fractal['type'] == 'bullish':
-                return any(float(candle['close']) > fractal_price for _, candle in recent_3m.iterrows())
+                # Fix: Make sure we're accessing DataFrame values correctly
+                return any(float(row['close']) > fractal_price for _, row in recent_3m.iterrows())
         else:
             # Для шорта ищем пробой медвежьего фрактала вниз
             if fractal['type'] == 'bearish':
-                return any(float(candle['close']) < fractal_price for _, candle in recent_3m.iterrows())
-        
+            # Fix: Make sure we're accessing DataFrame values correctly
+                return any(float(row['close']) < fractal_price for _, row in recent_3m.iterrows())
+    
         return False
 
     def check_skip_conditions(self, fractal):
@@ -361,9 +352,9 @@ class TradingBot1H3M:
             recent_3m = self.data_3m.tail(5)  # Последние 5 свечей
             dl_value = float(self.daily_limit)
             
-            # Проверяем, было ли снятие DL без закрепления
-            dl_broken = any(float(candle['low']) < dl_value for _, candle in recent_3m.iterrows())
-            dl_confirmed = all(float(candle['close']) < dl_value for _, candle in recent_3m.tail(2).iterrows())
+            # Fix: Make sure we're accessing DataFrame values correctly
+            dl_broken = any(float(row['low']) < dl_value for _, row in recent_3m.iterrows())
+            dl_confirmed = all(float(row['close']) < dl_value for _, row in recent_3m.tail(2).iterrows())
             
             if dl_broken and not dl_confirmed:
                 skip_reasons.append("Снятие DL без закрепления в шортовом контексте")
@@ -384,7 +375,7 @@ class TradingBot1H3M:
         
         # 4. Проверка на противоречие контексту
         if (self.current_context == 'long' and fractal['type'] == 'bearish') or \
-           (self.current_context == 'short' and fractal['type'] == 'bullish'):
+        (self.current_context == 'short' and fractal['type'] == 'bullish'):
             skip_reasons.append("Фрактал противоречит текущему контексту рынка")
         
         # 5. Проверка на уже открытую позицию в том же направлении
@@ -393,62 +384,60 @@ class TradingBot1H3M:
             
         return skip_reasons
 
+
     def calculate_target_distance(self, fractal):
         """
         Расчет расстояния до потенциальной цели в пунктах
         """
-        try:
-            current_price = float(self.data_3m['close'].iloc[-1])
-            
-            if self.current_context == 'long':
-                # Для лонга целевое расстояние вверх
-                recent_highs = self.data_1h['high'].tail(48)  # Последние 2 дня
-                potential_target = float(recent_highs.max())
-                distance = (potential_target - current_price) / float(self.point_size)
-            else:
-                # Для шорта целевое расстояние вниз
-                recent_lows = self.data_1h['low'].tail(48)  # Последние 2 дня
-                potential_target = float(recent_lows.min())
-                distance = (current_price - potential_target) / float(self.point_size)
-            
-            return abs(distance)
-        except Exception as e:
-            logger.error(f"Ошибка в calculate_target_distance: {e}")
-            return float('inf')  # Возвращаем бесконечность, чтобы условие не прошло
+        current_price = self.data_3m['close'].iloc[-1]
+        
+        if self.current_context == 'long':
+            # Для лонга целевое расстояние вверх
+            recent_highs = self.data_1h['high'].tail(48)  # Последние 2 дня
+            potential_target = recent_highs.max()
+            distance = (potential_target - current_price) / self.point_size
+        else:
+            # Для шорта целевое расстояние вниз
+            recent_lows = self.data_1h['low'].tail(48)  # Последние 2 дня
+            potential_target = recent_lows.min()
+            distance = (current_price - potential_target) / self.point_size
+
+        logger.debug(f"Calculated distance: {distance}, type: {type(distance)}")
+        return float(abs(distance))
 
     def calculate_target(self, fractal):
         """
         Расчет целевого уровня для позиции
         """
-        try:
-            current_price = float(self.data_3m['close'].iloc[-1])
+        current_price = self.data_3m['close'].iloc[-1]
+        
+        if self.current_context == 'long':
+            # Находим локальный максимум в пределах допустимого расстояния
+            max_target = current_price + (self.max_target_points * self.point_size)
+            recent_highs = self.data_1h['high'].tail(48)  # Последние 2 дня
             
-            if self.current_context == 'long':
-                # Находим локальный максимум в пределах допустимого расстояния
-                max_target = current_price + (float(self.max_target_points) * float(self.point_size))
-                recent_highs = self.data_1h['high'].tail(48)  # Последние 2 дня
-                
-                # Фильтруем максимумы, которые находятся в пределах допустимого расстояния
-                valid_highs = recent_highs[pd.to_numeric(recent_highs, errors='coerce') <= max_target]
-                
-                if not valid_highs.empty:
-                    return float(valid_highs.max())
-                return max_target  # Если нет подходящих целей, используем максимально допустимую
-            else:
-                # Находим локальный минимум в пределах допустимого расстояния
-                min_target = current_price - (float(self.max_target_points) * float(self.point_size))
-                recent_lows = self.data_1h['low'].tail(48)  # Последние 2 дня
-                
-                # Фильтруем минимумы, которые находятся в пределах допустимого расстояния
-                valid_lows = recent_lows[pd.to_numeric(recent_lows, errors='coerce') >= min_target]
-                
-                if not valid_lows.empty:
-                    return float(valid_lows.min())
-                return min_target  # Если нет подходящих целей, используем максимально допустимую
-                
-        except Exception as e:
-            logger.error(f"Ошибка в calculate_target: {e}")
-            return None
+            # Фильтруем максимумы, которые находятся в пределах допустимого расстояния
+            valid_highs = recent_highs[recent_highs.astype(float) <= max_target]
+            
+            if not valid_highs.empty:
+                return valid_highs.max()
+        else:
+            # Находим локальный минимум в пределах допустимого расстояния
+            min_target = current_price - (self.max_target_points * self.point_size)
+            recent_lows = self.data_1h['low'].tail(48)  # Последние 2 дня
+            
+            # Фильтруем минитумы, которые находятся в пределах допустимого расстояния
+            valid_lows = recent_lows[recent_lows >= min_target]
+            
+            if not valid_lows.empty:
+                return valid_lows.min()
+        
+        # Если не нашли подходящую цель в исторических данных,
+        # используем максимальное допустимое расстояние
+        if self.current_context == 'long':
+            return current_price + (self.max_target_points * self.point_size)
+        else:
+            return current_price - (self.max_target_points * self.point_size)
 
     def execute_trade(self, entry_signal):
         """
@@ -457,11 +446,11 @@ class TradingBot1H3M:
         if self.exchange:
             # Реальное исполнение через биржу
             direction = entry_signal['direction']
-            entry_price = float(entry_signal['entry_price'])
-            target_price = float(entry_signal['target'])
+            entry_price = entry_signal['entry_price']
+            target_price = entry_signal['target']
             
             # Расчет стоп-лосса (например, на основе фрактала)
-            stop_loss = float(entry_signal['fractal']['price'])
+            stop_loss = entry_signal['fractal']['price']
             
             # Расчет объема позиции (примерно 1% риска)
             risk_amount = 0.01  # 1% от депозита
@@ -496,11 +485,11 @@ class TradingBot1H3M:
         else:
             # Режим тестирования - симуляция открытия позиции
             direction = entry_signal['direction']
-            entry_price = float(entry_signal['entry_price'])
-            target_price = float(entry_signal['target'])
+            entry_price = entry_signal['entry_price']
+            target_price = entry_signal['target']
             
             # Расчет стоп-лосса
-            stop_loss = float(entry_signal['fractal']['price'])
+            stop_loss = entry_signal['fractal']['price']
             
             # Добавление в открытые позиции
             self.open_positions.append({
@@ -521,22 +510,18 @@ class TradingBot1H3M:
         Расчет размера позиции на основе риска
         """
         if self.exchange:
-            try:
-                # Получение баланса аккаунта
-                balance = self.exchange.fetch_balance()
-                total_balance = float(balance['total']['USD'])  # Предполагаем, что баланс в USD
-                
-                # Сумма риска
-                risk_in_currency = total_balance * risk_amount
-                
-                # Расчет размера позиции
-                pip_risk = abs(float(entry_price) - float(stop_loss)) / float(self.point_size)
-                position_size = risk_in_currency / pip_risk if pip_risk > 0 else 0.0
-                
-                return position_size
-            except Exception as e:
-                logger.error(f"Ошибка при расчете размера позиции: {e}")
-                return 0.1  # Минимальный размер по умолчанию
+            # Получение баланса аккаунта
+            balance = self.exchange.fetch_balance()
+            total_balance = balance['total']['USD']  # Предполагаем, что баланс в USD
+            
+            # Сумма риска
+            risk_in_currency = total_balance * risk_amount
+            
+            # Расчет размера позиции
+            pip_risk = abs(entry_price - stop_loss) / self.point_size
+            position_size = risk_in_currency / pip_risk
+            
+            return position_size
         else:
             # В тестовом режиме возвращаем фиксированный размер
             return 1.0
@@ -548,77 +533,191 @@ class TradingBot1H3M:
         if not self.open_positions:
             return
         
-        try:
-            current_price = float(self.data_3m['close'].iloc[-1])
-            positions_to_close = []
+        current_price = self.data_3m['close'].iloc[-1]
+        positions_to_close = []
+        
+        for i, position in enumerate(self.open_positions):
+            # Проверка достижения цели
+            target_reached = (position['direction'] == 'long' and current_price >= position['target']) or \
+                            (position['direction'] == 'short' and current_price <= position['target'])
             
-            for i, position in enumerate(self.open_positions):
-                # Проверка достижения цели
-                target_reached = (position['direction'] == 'long' and current_price >= float(position['target'])) or \
-                                (position['direction'] == 'short' and current_price <= float(position['target']))
-                
-                # Проверка стоп-лосса
-                stop_loss_triggered = (position['direction'] == 'long' and current_price <= float(position['stop_loss'])) or \
-                                     (position['direction'] == 'short' and current_price >= float(position['stop_loss']))
-                
-                if target_reached or stop_loss_triggered:
-                    if self.exchange:
-                        # Закрытие реальной позиции
-                        try:
-                            order_type = 'sell' if position['direction'] == 'long' else 'buy'
-                            self.exchange.create_order(
-                                symbol=self.symbol,
-                                type='market',
-                                side=order_type,
-                                amount=float(position['size'])
-                            )
-                            
-                            reason = "цель достигнута" if target_reached else "сработал стоп-лосс"
-                            pnl = (current_price - float(position['entry_price'])) * float(position['size']) if position['direction'] == 'long' else \
-                                  (float(position['entry_price']) - current_price) * float(position['size'])
-                            
-                            logger.info(f"Закрыта позиция {position['id']}: {reason}, PnL: {pnl}")
-                        except Exception as e:
-                            logger.error(f"Ошибка закрытия позиции: {e}")
-                    else:
-                        # Тестовый режим
-                        reason = "цель достигнута" if target_reached else "сработал стоп-лосс"
-                        pnl = (current_price - float(position['entry_price'])) / float(self.point_size) if position['direction'] == 'long' else \
-                              (float(position['entry_price']) - current_price) / float(self.point_size)
+            # Проверка стоп-лосса
+            stop_loss_triggered = (position['direction'] == 'long' and current_price <= position['stop_loss']) or \
+                                 (position['direction'] == 'short' and current_price >= position['stop_loss'])
+            
+            if target_reached or stop_loss_triggered:
+                if self.exchange:
+                    # Закрытие реальной позиции
+                    try:
+                        order_type = 'sell' if position['direction'] == 'long' else 'buy'
+                        self.exchange.create_order(
+                            symbol=self.symbol,
+                            type='market',
+                            side=order_type,
+                            amount=position['size']
+                        )
                         
-                        logger.info(f"[ТЕСТ] Закрыта позиция {position['id']}: {reason}, PnL: {pnl} пунктов")
+                        reason = "цель достигнута" if target_reached else "сработал стоп-лосс"
+                        pnl = (current_price - position['entry_price']) * position['size'] if position['direction'] == 'long' else \
+                              (position['entry_price'] - current_price) * position['size']
+                        
+                        logger.info(f"Закрыта позиция {position['id']}: {reason}, PnL: {pnl}")
+                    except Exception as e:
+                        logger.error(f"Ошибка закрытия позиции: {e}")
+                else:
+                    # Тестовый режим
+                    reason = "цель достигнута" if target_reached else "сработал стоп-лосс"
+                    pnl = (current_price - position['entry_price']) / self.point_size if position['direction'] == 'long' else \
+                          (position['entry_price'] - current_price) / self.point_size
                     
-                    positions_to_close.append(i)
-            
-            # Удаление закрытых позиций
-            for i in sorted(positions_to_close, reverse=True):
-                del self.open_positions[i]
-        except Exception as e:
-            logger.error(f"Ошибка в manage_open_positions: {e}")
+                    logger.info(f"[ТЕСТ] Закрыта позиция {position['id']}: {reason}, PnL: {pnl} пунктов")
+                
+                positions_to_close.append(i)
+        
+        # Удаление закрытых позиций
+        for i in sorted(positions_to_close, reverse=True):
+            del self.open_positions[i]
 
     def update_daily_limit(self):
         """
         Обновление дневного лимита (DL)
         """
-        try:
-            # Дневной лимит - последний локальный экстремум в противоположном направлении контекста
-            today_data = self.data_1h[self.data_1h.index.date == datetime.now().date()]
-            
-            if not today_data.empty:
-                if self.current_context == 'long':
-                    # В лонговом контексте DL - это минимум
-                    self.daily_limit = float(today_data['low'].min())
-                else:
-                    # В шортовом контексте DL - это максимум
-                    self.daily_limit = float(today_data['high'].max())
-                
-                logger.info(f"Обновлен дневной лимит (DL): {self.daily_limit}")
+        # Дневной лимит - последний локальный экстремум в противоположном направлении контекста
+        today_data = self.data_1h[self.data_1h.index.date == datetime.now().date()]
+        
+        if not today_data.empty:
+            if self.current_context == 'long':
+                # В лонговом контексте DL - это минимум
+                self.daily_limit = today_data['low'].min()
             else:
-                logger.warning("Не удалось обновить дневной лимит: нет данных за сегодня")
-        except Exception as e:
-            logger.error(f"Ошибка в update_daily_limit: {e}")
+                # В шортовом контексте DL - это максимум
+                self.daily_limit = today_data['high'].max()
+            
+            logger.info(f"Обновлен дневной лимит (DL): {self.daily_limit}")
 
-    
+    def run(self):
+        """
+        Запуск торгового бота
+        """
+        while True:
+            try:
+                # 1. Загрузка данных, только если еще не загружены
+                if bot.data_1h is None or bot.data_3m is None:
+                    logging.info('Загрузка исторических данных...')
+                    bot.fetch_data()
+                    bot.determine_market_context()
+                    bot.update_daily_limit()
+                
+                # Выводим информацию о контексте рынка
+                logging.info(f'Контекст рынка: {bot.current_context}')
+                print_market_context(bot.current_context)
+                
+                # Проверяем условия для входа
+                conditions = check_entry_conditions(bot)
+                logging.info(f'Условия для входа: {conditions}')
+                
+                print(f"\n{Fore.WHITE}{Style.BRIGHT}Условия для входа:")
+                for name, is_met, description in conditions:
+                    print_condition(name, is_met, description)
+                
+                # Выводим информацию о дневном лимите
+                logging.info(f'Дневной лимит: {bot.daily_limit}')
+                print_daily_limit(bot.daily_limit, bot.current_context)
+                
+                # Выводим информацию о фрактальных уровнях
+                logging.info(f'Фрактальные уровни: {bot.fractal_levels}')
+                print_fractal_levels(bot.fractal_levels)
+                
+                # Выводим информацию о текущей сессии
+                logging.info('Статус торговых сессий')
+                print_session_status()
+                
+                # Проверяем наличие сигналов
+                entry_signals = bot.find_entry_points()
+                logging.info(f'Найденные сигналы: {entry_signals}')
+                
+                # Выводим информацию о сигналах
+                if entry_signals:
+                    for signal in entry_signals:
+                        print_signal(signal)
+                else:
+                    logging.info('Нет активных сигналов для входа')
+                    print(f"\n{Fore.YELLOW}Нет активных сигналов для входа")
+                
+                # Выводим информацию о пропущенных сигналах
+                logging.info(f'Пропущенные сигналы: {bot.skip_conditions}')
+                print_skip_conditions(bot.skip_conditions)
+                
+                # Выводим информацию об открытых позициях
+                logging.info(f'Открытые позиции: {bot.open_positions}')
+                print_open_positions(bot.open_positions)
+                
+                # Управление открытыми позициями
+                if bot.open_positions:
+                    bot.manage_open_positions()
+                
+                # Выводим меню
+                print_menu()
+                
+                # Получаем ввод пользователя
+                choice = input(f"{Fore.WHITE}Введите номер действия: ")
+                
+                if choice == '0':
+                    logging.info('Выход из программы')
+                    print(f"{Fore.GREEN}Выход из программы...")
+                    break
+                
+                elif choice == '1':
+                    logging.info('Обновление данных')
+                    print(f"{Fore.YELLOW}Обновление данных...")
+                    bot.fetch_data()
+                    bot.determine_market_context()
+                    bot.update_daily_limit()
+                    bot.find_entry_points()
+                
+                elif choice == '2':
+                    if entry_signals:
+                        logging.info('Выполнение сделки по сигналу')
+                        print(f"{Fore.YELLOW}Выполнение сделки по сигналу...")
+                        for signal in entry_signals:
+                            bot.execute_trade(signal)
+                        time.sleep(2)
+                    else:
+                        logging.info('Нет активных сигналов для входа')
+                        print(f"{Fore.RED}Нет активных сигналов для входа")
+                        time.sleep(2)
+                
+                elif choice == '3':
+                    logging.info('Создание графика стратегии')
+                    print(f"{Fore.YELLOW}Создание графика стратегии...")
+                    bot.visualize_strategy(save_path="strategy_chart.png")
+                    print(f"{Fore.GREEN}График сохранен в файл strategy_chart.png")
+                    time.sleep(2)
+                
+                elif choice == '4':
+                    new_symbol = input(f"{Fore.WHITE}Введите символ (EURUSD или GER40): ").upper()
+                    if new_symbol in ['EURUSD', 'GER40']:
+                        bot = TradingBot1H3M(symbol=new_symbol)
+                        logging.info(f'Символ изменен на {new_symbol}')
+                        print(f"{Fore.GREEN}Символ изменен на {new_symbol}")
+                        bot.fetch_data()
+                        bot.determine_market_context()
+                        bot.update_daily_limit()
+                    else:
+                        logging.info('Неподдерживаемый символ')
+                        print(f"{Fore.RED}Неподдерживаемый символ. Используйте EURUSD или GER40")
+                    time.sleep(2)
+                
+                else:
+                    logging.info('Неверный ввод')
+                    print(f"{Fore.RED}Неверный ввод")
+                    time.sleep(1)
+                
+            except Exception as e:
+                logging.error(f'Произошла ошибка: {e}')
+                print(f"{Fore.RED}Произошла ошибка: {e}")
+                time.sleep(5)
+
     def visualize_strategy(self, save_path=None):
         """
         Визуализация текущего состояния стратегии
