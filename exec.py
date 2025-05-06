@@ -175,15 +175,23 @@ def check_entry_conditions(bot):
         for fractal in bot.fractal_levels:
             if (bot.current_context == 'long' and fractal['type'] == 'bullish') or \
                (bot.current_context == 'short' and fractal['type'] == 'bearish'):
-                distance = bot.calculate_target_distance(fractal)
-                target_distance_ok = distance <= bot.max_target_points
-                target_distance_value = f"{int(distance)} из {bot.max_target_points} пунктов"
+                try:
+                    # Ensure distance is a float
+                    distance = float(bot.calculate_target_distance(fractal))
+                    # Ensure max_target_points is a float
+                    max_points = float(bot.max_target_points)
+                    target_distance_ok = distance <= max_points
+                    target_distance_value = f"{int(distance)} из {int(max_points)} пунктов"
+                except (ValueError, TypeError) as e:
+                    print(f"{Fore.RED}Ошибка при вычислении расстояния до цели: {e}")
+                    target_distance_ok = False
+                    target_distance_value = "Ошибка расчета"
                 break
     
     conditions.append(("Цель в пределах лимита", target_distance_ok, target_distance_value))
     
     return conditions
-
+    
 def main():
     """Основная функция программы"""
     global bot

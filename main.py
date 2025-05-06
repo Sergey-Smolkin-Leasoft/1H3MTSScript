@@ -326,11 +326,11 @@ class TradingBot1H3M:
         if self.current_context == 'long':
             # Для лонга ищем пробой бычьего фрактала вверх
             if fractal['type'] == 'bullish':
-                return any(candle['close'] > fractal['price'] for _, candle in recent_3m.iterrows())
+                return any(candle['close'] > float(fractal['price']) for _, candle in recent_3m.iterrows())
         else:
             # Для шорта ищем пробой медвежьего фрактала вниз
             if fractal['type'] == 'bearish':
-                return any(candle['close'] < fractal['price'] for _, candle in recent_3m.iterrows())
+                return any(candle['close'] < float(fractal['price']) for _, candle in recent_3m.iterrows())
         
         return False
 
@@ -387,8 +387,9 @@ class TradingBot1H3M:
             recent_lows = self.data_1h['low'].tail(48)  # Последние 2 дня
             potential_target = recent_lows.min()
             distance = (current_price - potential_target) / self.point_size
-        
-        return abs(distance)
+
+        logger.debug(f"Calculated distance: {distance}, type: {type(distance)}")
+        return float(abs(distance))
 
     def calculate_target(self, fractal):
         """
@@ -402,7 +403,7 @@ class TradingBot1H3M:
             recent_highs = self.data_1h['high'].tail(48)  # Последние 2 дня
             
             # Фильтруем максимумы, которые находятся в пределах допустимого расстояния
-            valid_highs = recent_highs[recent_highs <= max_target]
+            valid_highs = recent_highs[recent_highs.astype(float) <= max_target]
             
             if not valid_highs.empty:
                 return valid_highs.max()
