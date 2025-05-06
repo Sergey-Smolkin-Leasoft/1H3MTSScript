@@ -36,6 +36,20 @@ def print_condition(condition_name, is_met, description=""):
     indicator = f"{Fore.GREEN}✓" if is_met else f"{Fore.RED}✗"
     print(f"{indicator} {Fore.WHITE}{condition_name}{Fore.YELLOW} {description}")
 
+def print_conditions_wrapper(conditions):
+    """Обертка для безопасного вывода условий"""
+    print(f"\n{Fore.WHITE}{Style.BRIGHT}Условия для входа:")
+    for condition in conditions:
+        # Проверяем длину кортежа и применяем соответствующий формат
+        if len(condition) == 3:
+            name, is_met, description = condition
+            print_condition(name, is_met, description)
+        elif len(condition) == 2:
+            name, is_met = condition
+            print_condition(name, is_met)
+        else:
+            print(f"{Fore.RED}Ошибка формата условия: {condition}")
+
 def print_signal(signal):
     """Печать информации о сигнале"""
     direction_color = Fore.GREEN if signal['direction'] == 'long' else Fore.RED
@@ -102,9 +116,13 @@ def print_daily_limit(limit, context):
     if limit is None:
         print(f"\n{Fore.WHITE}Дневной лимит: {Fore.YELLOW}Не установлен")
         return
-        
-    limit_type = "Поддержка" if context == 'long' else "Сопротивление"
-    print(f"\n{Fore.WHITE}Дневной лимит ({limit_type}): {Fore.CYAN}{limit:.5f}")
+    
+    try:    
+        limit_type = "Поддержка" if context == 'long' else "Сопротивление"
+        print(f"\n{Fore.WHITE}Дневной лимит ({limit_type}): {Fore.CYAN}{limit:.5f}")
+    except (ValueError, TypeError):
+        # Если не удалось отформатировать limit как число, выводим как есть
+        print(f"\n{Fore.WHITE}Дневной лимит ({limit_type}): {Fore.CYAN}{limit}")
 
 def print_session_status():
     """Печать информации о текущей торговой сессии"""
@@ -120,10 +138,17 @@ def print_session_status():
     
     print(f"\n{Fore.WHITE}{Style.BRIGHT}Статус торговых сессий:")
     
-    for session_name, (start, end) in sessions.items():
-        is_active = start <= hour < end
-        status = f"{Fore.GREEN}Активна" if is_active else f"{Fore.YELLOW}Неактивна"
-        print(f"  {session_name}: {status} ({start}:00-{end}:00 UTC)")
+    for session_name, session_times in sessions.items():
+        try:
+            # Преобразуем значения времени в целые числа
+            start = int(session_times[0]) if isinstance(session_times, tuple) and len(session_times) > 0 else 0
+            end = int(session_times[1]) if isinstance(session_times, tuple) and len(session_times) > 1 else 24
+            
+            is_active = start <= hour < end
+            status = f"{Fore.GREEN}Активна" if is_active else f"{Fore.YELLOW}Неактивна"
+            print(f"  {session_name}: {status} ({start}:00-{end}:00 UTC)")
+        except (ValueError, TypeError, IndexError):
+            print(f"  {session_name}: {Fore.RED}Ошибка в формате сессии")
 
 def print_menu():
     """Печать меню действий"""
@@ -155,8 +180,30 @@ def check_entry_conditions(bot):
     in_trading_session = False
     current_session = "Нет активной сессии"
     
-    for session_name, (start, end) in bot.sessions.items():
-        if start <= hour < end:
+    # Проверяем, есть ли у бота атрибут sessions, если нет, создаем стандартный словарь сессий
+    sessions = getattr(bot, 'sessions', {
+        'Азиатская': (1, 9),
+        'Лондонская': (8, 16),
+        'Нью-Йоркская': (13, 21),
+        'Франкфуртская': (7, 15)
+    })
+    
+    for session_name, session_times in sessions.items():
+        try:
+            # Безопасное извлечение значений из кортежа или списка
+            if isinstance(session_times, (tuple, list)) and len(session_times) >= 2:
+                start = int(session_times[0])
+                end = int(session_times[1])
+            else:
+                # Если не кортеж/список или недостаточно элементов, пропускаем
+                continue
+                
+            if start <= hour < end:
+                in_trading_session = True
+                current_session = session_name
+                break
+        except (ValueError, TypeError) as e:
+            print(f"{Fore.RED}Ошибка в формате сессии {session_name}: {e}")
             in_trading_session = True
             current_session = session_name
             break
@@ -165,11 +212,15 @@ def check_entry_conditions(bot):
     
     # 4. Проверка дневного лимита
     dl_set = bot.daily_limit is not None
-    conditions.append(("Установлен дневной лимит", dl_set, f"{bot.daily_limit if dl_set else ''}"))
+    if dl_set:
+        dl_value = f"{bot.daily_limit:.5f}"
+    else:
+        dl_value = ""
+    conditions.append(("Установлен дневной лимит", dl_set, dl_value))
     
     # 5. Нет открытых позиций в том же направлении
     no_open_positions = not any(pos['direction'] == bot.current_context for pos in bot.open_positions)
-    conditions.append(("Нет открытых позиций в том же направлении", no_open_positions))
+    conditions.append(("Нет открытых позиций в том же направлении", no_open_positions, ""))  # Добавлен пустой description
     
     # 6. Целевое расстояние в пределах допустимого
     target_distance_ok = True
@@ -177,17 +228,37 @@ def check_entry_conditions(bot):
     
     if fractals_found:
         for fractal in bot.fractal_levels:
+            # Проверяем, соответствует ли фрактал текущему контексту рынка
             if (bot.current_context == 'long' and fractal['type'] == 'bullish') or \
                (bot.current_context == 'short' and fractal['type'] == 'bearish'):
                 try:
-                    # Ensure distance is a float
-                    distance = float(bot.calculate_target_distance(fractal))
-                    # Ensure max_target_points is a float
-                    max_points = float(bot.max_target_points)
+                    # Получаем расстояние и преобразуем его в число
+                    distance = bot.calculate_target_distance(fractal)
+                    # Если calculate_target_distance вернул строку, преобразуем в float
+                    if isinstance(distance, str):
+                        distance = float(distance.replace(',', '.'))
+                    else:
+                        distance = float(distance)
+                    
+                    # Получаем максимальное расстояние и преобразуем его в число
+                    max_points = getattr(bot, 'max_target_points', float('inf'))
+                    # Если max_target_points - строка, преобразуем в float
+                    if isinstance(max_points, str):
+                        max_points = float(max_points.replace(',', '.'))
+                    else:
+                        max_points = float(max_points)
+                    
+                    # Сравниваем расстояние с максимально допустимым
                     target_distance_ok = distance <= max_points
                     target_distance_value = f"{int(distance)} из {int(max_points)} пунктов"
-                except (ValueError, TypeError) as e:
-                    print(f"{Fore.RED}Ошибка при вычислении расстояния до цели: {e}")
+                except (ValueError, TypeError, AttributeError) as e:
+                    # Более подробное сообщение об ошибке для отладки
+                    error_details = f"Тип distance: {type(distance) if 'distance' in locals() else 'не определен'}, "
+                    error_details += f"Значение distance: {distance if 'distance' in locals() else 'не определено'}, "
+                    error_details += f"Тип max_points: {type(max_points) if 'max_points' in locals() else 'не определен'}, "
+                    error_details += f"Значение max_points: {max_points if 'max_points' in locals() else 'не определено'}"
+                    print(f"{Fore.RED}Ошибка при вычислении расстояния до цели: {e}\n{error_details}")
+                    
                     target_distance_ok = False
                     target_distance_value = "Ошибка расчета"
                 break
@@ -195,7 +266,7 @@ def check_entry_conditions(bot):
     conditions.append(("Цель в пределах лимита", target_distance_ok, target_distance_value))
     
     return conditions
-    
+
 def main():
     """Основная функция программы"""
     global bot
@@ -235,7 +306,7 @@ def main():
             print_session_status()
             
             # Проверяем наличие сигналов
-            entry_signals = bot.find_entry_points()
+            entry_signals = bot.find_entry_signals()
             
             # Выводим информацию о сигналах
             if entry_signals:
@@ -305,6 +376,8 @@ def main():
                 
         except Exception as e:
             print(f"{Fore.RED}Произошла ошибка: {e}")
+            import traceback
+            traceback.print_exc()  # Печать полного стека вызовов для отладки
             time.sleep(5)
 
 if __name__ == "__main__":
