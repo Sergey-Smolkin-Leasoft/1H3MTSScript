@@ -12,6 +12,7 @@ import os
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import linregress
+from database import TradingDatabase
 
 # Настройка логирования
 logging.basicConfig(
@@ -29,6 +30,24 @@ class TradingBot1H3M:
     Торговый бот, реализующий стратегию 1H3M
     """
     def __init__(self, symbol, timeframe_1h='1h', timeframe_3m='3m', exchange=None):
+        """
+        Инициализация бота
+        
+        Parameters:
+        symbol (str): Торговый символ (например, 'EURUSD', 'GER40')
+        timeframe_1h (str): Временной интервал для часового графика
+        timeframe_3m (str): Временной интервал для 3-минутного графика
+        exchange: Биржевой объект для торговли (если None, используется тестовый режим)
+        """
+        self.symbol = symbol
+        self.timeframe_1h = timeframe_1h
+        self.timeframe_3m = timeframe_3m
+        self.exchange = exchange
+        
+        # Инициализация базы данных
+        self.db = TradingDatabase()
+        
+        # Настройка Twelve Data API
         """
         Инициализация бота
         
@@ -996,6 +1015,44 @@ class TradingBot1H3M:
     def execute_trade(self, entry_signal):
         """
         Исполнение торгового сигнала
+        
+        Parameters:
+        entry_signal (dict): Словарь с параметрами входа
+            - direction: 'long' или 'short'
+            - entry_price: Цена входа
+            - stop_loss: Стоп-лосс
+            - take_profit: Тейк-профит
+            - fractal_type: Тип фрактала
+        """
+        # Получаем текущее время для записи в базу
+        entry_time = datetime.now()
+        
+        # Вычисляем размер позиции
+        position_size = self.calculate_position_size(
+            entry_signal['entry_price'],
+            entry_signal['stop_loss']
+        )
+        
+        # Логируем информацию о сделке в базу
+        trade_data = {
+            'symbol': self.symbol,
+            'entry_time': entry_time,
+            'direction': entry_signal['direction'],
+            'entry_price': entry_signal['entry_price'],
+            'stop_loss': entry_signal['stop_loss'],
+            'take_profit': entry_signal['take_profit'],
+            'position_size': position_size,
+            'price_context': self.price_context,
+            'session': self.get_current_session(),
+            'fractal_type': entry_signal['fractal_type'],
+            'is_profitable': False,  # Будет обновлено при закрытии сделки
+            'risk_reward_ratio': abs(entry_signal['take_profit'] - entry_signal['entry_price']) / 
+                               abs(entry_signal['entry_price'] - entry_signal['stop_loss'])
+        }
+        
+        trade_id = self.db.log_trade(trade_data)
+        """
+        Исполнение торгового сигнала
         """
         if self.exchange:
             # Реальное исполнение через биржу
@@ -1094,6 +1151,60 @@ class TradingBot1H3M:
                 return 10.0
 
     def manage_open_positions(self):
+        """
+        Управление открытыми позициями
+        """
+        current_time = datetime.now()
+        
+        # Получаем все открытые позиции из базы
+        open_trades = self.db.get_trade_stats(
+            symbol=self.symbol,
+            start_date=current_time - timedelta(days=1)
+        )
+        
+        # Получаем текущую цену
+        current_price = self.get_current_price()
+        
+        for trade in open_trades:
+            if trade['exit_time'] is None:  # Позиция все еще открыта
+                direction = trade['direction']
+                entry_price = trade['entry_price']
+                stop_loss = trade['stop_loss']
+                take_profit = trade['take_profit']
+                
+                # Проверяем условия закрытия
+                if direction == 'long':
+                    if current_price <= stop_loss or current_price >= take_profit:
+                        exit_price = current_price
+                        profit_loss = (exit_price - entry_price) * trade['position_size']
+                        is_profitable = profit_loss > 0
+                        
+                        # Обновляем информацию о сделке в базе
+                        self.db.conn.execute('''
+                            UPDATE trades SET
+                                exit_time = ?,
+                                exit_price = ?,
+                                profit_loss = ?,
+                                is_profitable = ?
+                            WHERE id = ?
+                        ''', (current_time, exit_price, profit_loss, is_profitable, trade['id']))
+                        self.db.conn.commit()
+                else:  # short
+                    if current_price >= stop_loss or current_price <= take_profit:
+                        exit_price = current_price
+                        profit_loss = (entry_price - exit_price) * trade['position_size']
+                        is_profitable = profit_loss > 0
+                        
+                        # Обновляем информацию о сделке в базе
+                        self.db.conn.execute('''
+                            UPDATE trades SET
+                                exit_time = ?,
+                                exit_price = ?,
+                                profit_loss = ?,
+                                is_profitable = ?
+                            WHERE id = ?
+                        ''', (current_time, exit_price, profit_loss, is_profitable, trade['id']))
+                        self.db.conn.commit()
         """
         Управление открытыми позициями
         """
