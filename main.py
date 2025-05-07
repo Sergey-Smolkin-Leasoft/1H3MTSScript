@@ -412,38 +412,6 @@ class TradingBot1H3M:
         
         return ssl_bsl_levels
     
-    def analyze_market_context(self, recent_data):
-        """
-        Анализ контекста рынка
-        
-        Parameters:
-        recent_data: DataFrame с последними ценовыми данными
-        """
-        # Проверка горизонтального тренда
-        trend_info = self.check_horizontal_trend(recent_data)
-        
-        # Логирование информации о тренде
-        if trend_info['is_horizontal']:
-            logger.info(f"Обнаружен горизонтальный тренд (уверенность: {trend_info['confidence']:.2f}, R²: {trend_info['r_squared']:.2f})")
-        else:
-            logger.info(f"Тренд не горизонтальный (наклон: {trend_info['slope']:.6f}, R²: {trend_info['r_squared']:.2f})")
-        
-        # Проверка снятия SSL/BSL на разных таймфреймах
-        self.ssl_bsl_removed = False
-        self.ssl_bsl_levels = []
-        
-        # Проверяем SSL/BSL на разных таймфреймах
-        for timeframe_name, timeframe_hours in self.timeframes.items():
-            timeframe_data = self.data_1h.tail(timeframe_hours)
-            self.ssl_bsl_levels.extend(self.check_ssl_bsl(timeframe_data, timeframe_name))
-        
-        # Проверяем реакцию от зон POI/FVG
-        self.check_poi_fvg(recent_data)
-        
-        # Обновляем контекст рынка
-        self.current_context = self.update_context(recent_data)
-        
-        return self.current_context
     
     def check_poi_fvg(self, recent_data):
         """
