@@ -52,23 +52,86 @@ def print_conditions_wrapper(conditions):
 
 def print_signal(signal):
     """Печать информации о сигнале"""
+    # Убедитесь, что colorama и ее компоненты импортированы в начале файла exec.py
+    # Например:
+    # import colorama
+    # from colorama import Fore, Style
+    # colorama.init(autoreset=True) # Инициализация colorama
+
+    # Проверяем наличие необходимых ключей в словаре signal перед их использованием
+    expected_keys = ['direction', 'entry_price', 'take_profit', 'stop_loss']
+    missing_keys = [key for key in expected_keys if key not in signal]
+
+    if missing_keys:
+        # Выводим сообщение об ошибке, если каких-то ключей не хватает
+        # Предполагается, что Style, Fore, Style.RESET_ALL из colorama импортированы
+        print(f"\n{Style.BRIGHT}{Fore.RED}Ошибка: Словарь сигнала не содержит следующих ключей: {', '.join(missing_keys)}.{Style.RESET_ALL}")
+        print(f"Полученный сигнал: {signal}")
+        return
+
     direction_color = Fore.GREEN if signal['direction'] == 'long' else Fore.RED
     direction = signal['direction'].upper()
     entry_price = signal['entry_price']
-    target = signal['target']
-    target_pips = abs(target - entry_price) / (0.0001 if 'USD' in bot.symbol else 1)
     
-    # Рассчитываем риск
-    stop_loss = signal['fractal']['price']
-    risk_pips = abs(entry_price - stop_loss) / (0.0001 if 'USD' in bot.symbol else 1)
+    # КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 1: Используем 'take_profit' вместо 'target'
+    target = signal['take_profit'] 
+    
+    point_size_local = 0.0001 # Значение по умолчанию для EURUSD-подобных пар
+    symbol_local = "N/A"      # Значение по умолчанию
+
+    # Предполагается, что 'bot' - это глобальная переменная в exec.py,
+    # инициализированная экземпляром TradingBot1H3M.
+    # Эта переменная должна быть доступна в области видимости этой функции.
+    if 'bot' in globals() and hasattr(bot, 'symbol') and hasattr(bot, 'point_size'):
+        point_size_local = bot.point_size
+        symbol_local = bot.symbol
+    elif 'bot' in globals() and hasattr(bot, 'symbol'): 
+        # Если point_size не найден напрямую, пытаемся определить его по символу
+        symbol_local = bot.symbol
+        if 'USD' in symbol_local and 'XAU' not in symbol_local: # Для валютных пар типа EURUSD, GBPUSD
+             point_size_local = 0.0001
+        elif 'GER40' == symbol_local:
+             point_size_local = 1 
+        elif 'XAUUSD' == symbol_local:
+             point_size_local = 0.1
+        # Добавьте другие условия для разных символов, если необходимо
+        else:
+            # Предполагается, что Fore, Style, Style.RESET_ALL из colorama импортированы
+            print(f"{Fore.YELLOW}Предупреждение: Не удалось автоматически определить point_size для символа {symbol_local}. Используется значение по умолчанию {point_size_local}.{Style.RESET_ALL}")
+    else:
+        # Предполагается, что Fore, Style, Style.RESET_ALL из colorama импортированы
+        print(f"{Fore.YELLOW}Предупреждение: Глобальная переменная 'bot' или ее атрибуты 'symbol'/'point_size' не найдены. Расчет пунктов может быть неточным.{Style.RESET_ALL}")
+
+    # Убедимся, что target и entry_price являются числами перед использованием в расчетах
+    if not isinstance(target, (int, float)) or not isinstance(entry_price, (int, float)):
+        # Предполагается, что Fore, Style.RESET_ALL из colorama импортированы
+        print(f"{Fore.RED}Ошибка: target ({target}) или entry_price ({entry_price}) не являются числами.{Style.RESET_ALL}")
+        return
+        
+    target_pips = abs(target - entry_price) / point_size_local
+    
+    # КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 2: Используем 'stop_loss' из словаря signal
+    stop_loss = signal['stop_loss']
+
+    # Убедимся, что stop_loss является числом
+    if not isinstance(stop_loss, (int, float)):
+        # Предполагается, что Fore, Style.RESET_ALL из colorama импортированы
+        print(f"{Fore.RED}Ошибка: stop_loss ({stop_loss}) не является числом.{Style.RESET_ALL}")
+        return
+        
+    risk_pips = abs(entry_price - stop_loss) / point_size_local
+    
+    # Избегаем деления на ноль для risk_reward
     risk_reward = target_pips / risk_pips if risk_pips > 0 else float('inf')
     
-    print(f"\n{Style.BRIGHT}Сигнал для входа:")
-    print(f"  Направление: {direction_color}{direction}")
-    print(f"  Цена входа: {Fore.CYAN}{entry_price:.5f}")
-    print(f"  Целевой уровень: {Fore.CYAN}{target:.5f} ({int(target_pips)} пунктов)")
-    print(f"  Стоп-лосс: {Fore.CYAN}{stop_loss:.5f} ({int(risk_pips)} пунктов)")
-    print(f"  Соотношение риск/прибыль: {Fore.YELLOW}{risk_reward:.2f}")
+    # Предполагается, что Style, Fore, Style.RESET_ALL, Fore.MAGENTA из colorama импортированы
+    print(f"\n{Style.BRIGHT}Сигнал для входа ({symbol_local}):")
+    print(f"  Направление: {direction_color}{direction}{Style.RESET_ALL}")
+    print(f"  Цена входа: {Fore.CYAN}{entry_price:.5f}{Style.RESET_ALL}")
+    print(f"  Целевой уровень (Take Profit): {Fore.CYAN}{target:.5f}{Style.RESET_ALL} ({Fore.MAGENTA}{int(target_pips)} пунктов{Style.RESET_ALL})")
+    print(f"  Стоп-лосс: {Fore.CYAN}{stop_loss:.5f}{Style.RESET_ALL} ({Fore.MAGENTA}{int(risk_pips)} пунктов{Style.RESET_ALL})")
+    print(f"  Соотношение риск/прибыль: {Fore.YELLOW}{risk_reward:.2f}{Style.RESET_ALL}")
+
 
 def print_open_positions(positions):
     """Печать информации об открытых позициях"""
@@ -340,7 +403,7 @@ def main():
                 bot.fetch_data()
                 bot.analyze_market_context(bot.data_3m)
                 bot.update_daily_limit()
-                bot.find_entry_points()
+                bot.find_entry_signals()
                 
             elif choice == '2':
                 if entry_signals:

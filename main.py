@@ -13,6 +13,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from scipy.stats import linregress
 from database import TradingDatabase
+import mplfinance as mpf
 
 # Настройка логирования
 logging.basicConfig(
@@ -541,7 +542,103 @@ class TradingBot1H3M:
                 })
         
         return bullish_fractals, bearish_fractals
+
     def find_entry_signals(self):
+        """
+        Поиск сигналов входа на основе фракталов и сессий
+        
+        Returns:
+        list: Список сигналов входа
+        """
+        # Получение часовых фракталов
+        bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
+        
+        # Фильтрация фракталов по сессиям
+        frankfurt_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'frankfurt')
+        london_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'london')
+        ny_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'newyork')
+        
+        # Объединение интересующих нас фракталов
+        target_fractals = frankfurt_fractals + london_fractals + ny_fractals
+        
+        # Текущие точки набора
+        self.fractal_levels = target_fractals
+        
+        # Сбрасываем skip_conditions при каждом поиске
+        self.skip_conditions = []
+        
+        # Список для хранения сигналов входа
+        entry_signals = []
+        
+        # Проверка времени для GER40
+        if self.symbol == 'GER40':
+            current_time = datetime.now() # Убедитесь, что datetime импортирован: from datetime import datetime
+            # Проверяем, что до начала Нью-Йоркской сессии осталось больше 5 минут
+            if current_time.hour == 12 and current_time.minute >= 55:  # 12:55 - 5 минут до 13:00
+                logger.info(f"Пропуск сигнала для GER40: менее 5 минут до начала Нью-Йоркской сессии") # Убедитесь, что logger определен
+                return []
+        
+        # Проверка каждого фрактала на возможность входа
+        for fractal in target_fractals:
+            # Проверяем соответствие направления фрактала текущему контексту
+            valid_fractal_type = (self.current_context == 'long' and fractal['type'] == 'bullish') or \
+                                (self.current_context == 'short' and fractal['type'] == 'bearish')
+            
+            if not valid_fractal_type:
+                continue
+            
+            # Проверяем слом фрактала на 3-минутном графике
+            # (логика слома фрактала, если она есть, должна быть здесь или в check_fractal_breakout)
+
+            # Исправление: Добавляем вызов check_skip_conditions перед использованием skip_reasons
+            skip_reasons = self.check_skip_conditions(fractal)
+            
+            if skip_reasons:
+                logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']} по причинам: {', '.join(skip_reasons)}")
+                self.skip_conditions.append({
+                    'fractal': fractal,
+                    'reasons': skip_reasons,
+                    'timestamp': datetime.now() # Убедитесь, что datetime импортирован
+                })
+                continue
+            
+            # Проверяем потенциальную цель
+            target = self.calculate_target(fractal)
+            if target is not None:
+                # Убедимся, что data_3m не пустой и содержит столбец 'close'
+                if self.data_3m is None or self.data_3m.empty or 'close' not in self.data_3m.columns:
+                    logger.warning("data_3m пуст или не содержит столбец 'close'. Невозможно получить entry_price.")
+                    continue
+                
+                entry_price = float(self.data_3m['close'].iloc[-1])
+                
+                # Рассчитываем потенциальную прибыль и убыток
+                if self.current_context == 'long':
+                    potential_profit = target - entry_price
+                    potential_loss = entry_price - fractal['price']
+                else: # self.current_context == 'short'
+                    potential_profit = entry_price - target
+                    potential_loss = fractal['price'] - entry_price
+                
+                # Проверяем соотношение риск/прибыль
+                # Добавлена проверка potential_loss > 0 чтобы избежать деления на ноль
+                if potential_loss > 0 and potential_profit / potential_loss >= 1.3:
+                    entry_signals.append({
+                        'fractal': fractal,
+                        'entry_price': entry_price,
+                        'stop_loss': self.calculate_stop_loss(entry_price, fractal['price']),
+                        'take_profit': target,
+                        'direction': 'long' if self.current_context == 'long' else 'short'
+                    })
+                else:
+                    if potential_loss <= 0:
+                        logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: потенциальный убыток равен нулю или отрицателен ({potential_loss=}).")
+                    else:
+                        logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: RR < 1.3 ({potential_profit / potential_loss:.2f})")
+            
+        return entry_signals
+
+
         """
         Поиск сигналов входа на основе фракталов и сессий
         """
@@ -610,40 +707,14 @@ class TradingBot1H3M:
         
         return entry_signals
 
-    def find_entry_signals(self):
+    
         """
         Поиск сигналов входа на основе фракталов и сессий
         
         Returns:
         list: Список сигналов входа
         """
-        # Получение часовых фракталов
-        bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
-        
-        # Фильтрация фракталов по сессиям
-        frankfurt_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'frankfurt')
-        london_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'london')
-        ny_fractals = self.filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, 'newyork')
-        
-        # Объединение интересующих нас фракталов
-        target_fractals = frankfurt_fractals + london_fractals + ny_fractals
-        
-        # Текущие точки набора
-        self.fractal_levels = target_fractals
-        
-        # Сбрасываем skip_conditions при каждом поиске
-        self.skip_conditions = []
-        
-        # Список для хранения сигналов входа
-        entry_signals = []
-        
-        # Проверка времени для GER40
-        if self.symbol == 'GER40':
-            current_time = datetime.now()
-            # Проверяем, что до начала Нью-Йоркской сессии осталось больше 5 минут
-            if current_time.hour == 12 and current_time.minute >= 55:  # 12:55 - 5 минут до 13:00
-                logger.info(f"Пропуск сигнала для GER40: менее 5 минут до начала Нью-Йоркской сессии")
-                return []
+        # ... (предыдущий код метода) ...
         
         # Проверка каждого фрактала на возможность входа
         for fractal in target_fractals:
@@ -655,6 +726,9 @@ class TradingBot1H3M:
                 continue
             
             # Проверяем слом фрактала на 3-минутном графике
+            
+            # ИЗМЕНЕНИЕ ЗДЕСЬ: Добавляем вызов check_skip_conditions
+            skip_reasons = self.check_skip_conditions(fractal)
             
             if skip_reasons:
                 logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']} по причинам: {', '.join(skip_reasons)}")
@@ -679,7 +753,7 @@ class TradingBot1H3M:
                     potential_loss = fractal['price'] - entry_price
                 
                 # Проверяем соотношение риск/прибыль
-                if potential_profit / potential_loss >= 1.3:
+                if potential_loss > 0 and potential_profit / potential_loss >= 1.3: # Добавлена проверка potential_loss > 0 чтобы избежать деления на ноль
                     entry_signals.append({
                         'fractal': fractal,
                         'entry_price': entry_price,
@@ -688,11 +762,39 @@ class TradingBot1H3M:
                         'direction': 'long' if self.current_context == 'long' else 'short'
                     })
                 else:
-                    logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: RR < 1.3")
+                    if potential_loss <= 0:
+                        logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: потенциальный убыток равен нулю или отрицателен.")
+                    else:
+                        logger.info(f"Пропуск сигнала для фрактала {fractal['timestamp']}: RR < 1.3")
             
         return entry_signals
     
     def filter_fractals_by_session(self, fractals, session_name, days_ago=0):
+        """
+        Фильтрация фракталов по торговой сессии
+        """
+        filtered_fractals = []
+        # Изменения здесь:
+        session_info = self.sessions[session_name]
+        session_start = session_info['start']
+        session_end = session_info['end']
+        
+        # Make sure we're getting the right number of values here
+        for fractal in fractals:
+            timestamp = fractal['timestamp']
+            
+            # Учитываем смещение дней
+            if days_ago > 0:
+                target_date = (datetime.now() - timedelta(days=days_ago)).date()
+                if timestamp.date() != target_date:
+                    continue
+            
+            # Проверка попадания в часы сессии
+            if session_start <= timestamp.hour < session_end:
+                filtered_fractals.append(fractal)
+        
+        return filtered_fractals
+
         """
         Фильтрация фракталов по торговой сессии
         """
@@ -1011,6 +1113,150 @@ class TradingBot1H3M:
                 
                 # Если Азия поработала с ликвидностью дважды, считаем это одним подтверждением
                 if self.check_liquidity_swipe('asia'):
+                    self.reversal_state['confirmed_swipes'] += 1 # Может быть += 0.5 если нужно два разных свипа
+                    self.reversal_state['last_swipe_session'] = 'asia'
+            
+            # Если у нас два подтверждения, проверяем условия для реверса
+            if self.reversal_state['confirmed_swipes'] >= 2:
+                # Проверяем, нет ли целей выше/ниже
+                current_price = float(self.data_3m['close'].iloc[-1])
+                if self.current_context == 'long': # Если контекст лонг, ищем реверс в шорт
+                    recent_lows = self.data_1h['low'].tail(48) # Ищем цели ниже для шорта
+                    if not any(float(low) < current_price for low in recent_lows): # Если нет целей ниже
+                        skip_reasons.append("Реверс: нет таргета ниже для шорта")
+                else: # Если контекст шорт, ищем реверс в лонг
+                    recent_highs = self.data_1h['high'].tail(48) # Ищем цели выше для лонга
+                    if not any(float(high) > current_price for high in recent_highs): # Если нет целей выше
+                        skip_reasons.append("Реверс: нет таргета выше для лонга")
+                        
+                # Проверяем противостоящую ОФ (Order Flow)
+                # Пример: если контекст лонг, и Нью-Йорк делает свип вниз (шортовый ОФ), это может быть против реверса в лонг
+                if self.current_context == 'long' and self.check_liquidity_swipe('newyork'): # Предполагаем, что check_liquidity_swipe может вернуть направление
+                    pass # Логика для "Против ОФ" может быть сложнее
+                
+                # Проверяем PWH/PWL (Previous Week High/Low) - эта логика здесь не реализована, но может быть добавлена
+                # if self.current_context == 'long':
+                #     # recent_highs = self.data_1h['high'].tail(168) # Данные за неделю
+                #     # if any(float(high) > current_price for high in recent_highs): # Упрощенно
+                #     #     skip_reasons.append("Есть PWH")
+                # else:
+                #     # recent_lows = self.data_1h['low'].tail(168)
+                #     # if any(float(low) < current_price for low in recent_lows):
+                #     #     skip_reasons.append("Есть PWL")
+        
+        # 1. Проверка снятия DL без закрепления в шортовом контексте
+        if self.current_context == 'short' and self.daily_limit is not None:
+            recent_3m_dl_check = self.data_3m.tail(5)  # Последние 5 свечей
+            if not recent_3m_dl_check.empty:
+                dl_value = float(self.daily_limit)
+                
+                # Fix: Make sure we're accessing DataFrame values correctly
+                dl_broken = any(float(row['low']) < dl_value for _, row in recent_3m_dl_check.iterrows())
+                # Проверяем закрепление: последние 2 свечи закрылись ниже DL
+                dl_confirmed = all(float(row['close']) < dl_value for _, row in recent_3m_dl_check.tail(2).iterrows()) if len(recent_3m_dl_check) >=2 else False
+                
+                if dl_broken and not dl_confirmed:
+                    skip_reasons.append("Снятие DL без закрепления в шортовом контексте")
+        
+        # 2. Проверка, что фрактал не слишком старый (больше 2 дней)
+        fractal_time = pd.to_datetime(fractal['timestamp']) # Убедитесь, что pandas импортирован: import pandas as pd
+        if (datetime.now() - fractal_time).days > 2: # Убедитесь, что datetime импортирован: from datetime import datetime
+            skip_reasons.append("Фрактал старше 2 дней")
+        
+        # 3. Проверка расстояния до цели
+        try:
+            target_distance = float(self.calculate_target_distance(fractal))
+            max_points = float(self.max_target_points)
+            if target_distance > max_points:
+                skip_reasons.append(f"Цель превышает максимальное расстояние ({target_distance:.0f} > {max_points:.0f})")
+        except (ValueError, TypeError) as e:
+            logger.error(f"Ошибка при расчете расстояния до цели для фрактала {fractal['timestamp']}: {e}")
+            skip_reasons.append("Ошибка расчета расстояния до цели")
+        
+        # 5. Проверка на Frankfurt manipulation setup
+        # Этот блок должен выполняться только если текущий контекст соответствует типу фрактала
+        # Например, если контекст 'long', то ищем бычий франкфуртский фрактал для манипуляции
+        if (self.current_context == 'long' and fractal['type'] == 'bullish') or \
+           (self.current_context == 'short' and fractal['type'] == 'bearish'):
+            # Проверяем, что фрактал находится в Франкфуртской сессии
+            # Используем self.filter_fractals_by_session для проверки принадлежности фрактала сессии
+            if fractal in self.filter_fractals_by_session([fractal], 'frankfurt'): # Передаем список с одним фракталом
+                recent_3m_frankfurt_check = self.data_3m.tail(120) # Берем данные за последние 6 часов (120 * 3 мин) для анализа сессий
+                if not recent_3m_frankfurt_check.empty:
+                    frankfurt_end_hour = self.sessions['frankfurt']['end'] # 15 UTC
+                    london_start_hour = self.sessions['london']['start']   # 8 UTC
+
+                    # Находим свечи Франкфуртской сессии в указанном временном интервале (например, последний час Франкфурта)
+                    # Уточняем время: ищем свечи в последний час Франкфуртской сессии (14:00-14:59 UTC)
+                    frankfurt_candles_filtered = recent_3m_frankfurt_check[
+                        (recent_3m_frankfurt_check.index.hour >= frankfurt_end_hour - 1) & 
+                        (recent_3m_frankfurt_check.index.hour < frankfurt_end_hour)
+                    ]
+                    
+                    if not frankfurt_candles_filtered.empty:
+                        # Берем минимум/максимум за этот период Франкфурта в зависимости от контекста
+                        if self.current_context == 'long': # Ищем снятие франкфуртского лоу
+                            frankfurt_extreme_price = float(frankfurt_candles_filtered['low'].min())
+                        else: # Ищем снятие франкфуртского хая
+                            frankfurt_extreme_price = float(frankfurt_candles_filtered['high'].max())
+
+                        # Находим все свечи Лондонской сессии в первый час (08:00-08:59 UTC)
+                        london_candles = recent_3m_frankfurt_check[
+                            (recent_3m_frankfurt_check.index.hour >= london_start_hour) & 
+                            (recent_3m_frankfurt_check.index.hour < london_start_hour + 1)
+                        ]
+                        
+                        if not london_candles.empty:
+                            london_manipulation_detected = False
+                            if self.current_context == 'long': # Лондон снял франкфуртский лоу
+                                london_manipulation_detected = any(float(candle['low']) < frankfurt_extreme_price for _, candle in london_candles.iterrows())
+                            else: # Лондон снял франкфуртский хай
+                                london_manipulation_detected = any(float(candle['high']) > frankfurt_extreme_price for _, candle in london_candles.iterrows())
+                            
+                            if london_manipulation_detected:
+                                # Проверяем 3м слом в сторону контекста после манипуляции
+                                if self.check_fractal_breakout(fractal): 
+                                    skip_reasons.append("Frankfurt manipulation setup")
+                    else:
+                        logger.info("Не найдены свечи Франкфуртской сессии для проверки Frankfurt manipulation setup.")
+                else:
+                    logger.info("recent_3m пуст, невозможно проверить Frankfurt manipulation setup.")
+                        
+        # 4. Проверка на противоречие контексту (это условие уже проверено в find_entry_signals, но можно оставить для надежности)
+        if (self.current_context == 'long' and fractal['type'] == 'bearish') or \
+           (self.current_context == 'short' and fractal['type'] == 'bullish'):
+            skip_reasons.append("Фрактал противоречит текущему контексту рынка")
+        
+        # 5. Проверка на уже открытую позицию в том же направлении
+        if any(pos['direction'] == self.current_context for pos in self.open_positions):
+            skip_reasons.append("Уже открыта позиция в данном направлении")
+            
+        return skip_reasons
+
+        """
+        Проверка скип-ситуаций, когда не следует входить в сделку
+        """
+        skip_reasons = []
+        
+        # Проверяем горизонтальный тренд
+        if self.horizontal_trend['is_horizontal'] and self.horizontal_trend['confidence'] > 0.8:
+            # Если обнаружен сильный горизонтальный тренд, пропускаем сигналы в направлении тренда
+            if self.current_context == 'long' and self.horizontal_trend['slope'] > 0:
+                skip_reasons.append("Пропуск сигнала: горизонтальный тренд с положительным наклоном")
+            elif self.current_context == 'short' and self.horizontal_trend['slope'] < 0:
+                skip_reasons.append("Пропуск сигнала: горизонтальный тренд с отрицательным наклоном")
+        
+        # Проверяем реверсальную ситуацию
+        if self.reversal_state['important_target_removed']:
+            # Проверяем свип ликвидности слева
+            if self.reversal_state['confirmed_swipes'] < 2:
+                # Проверяем свип в европейской сессии
+                if self.check_liquidity_swipe('frankfurt') or self.check_liquidity_swipe('london'):
+                    self.reversal_state['confirmed_swipes'] += 1
+                    self.reversal_state['last_swipe_session'] = 'european'
+                
+                # Если Азия поработала с ликвидностью дважды, считаем это одним подтверждением
+                if self.check_liquidity_swipe('asia'):
                     self.reversal_state['confirmed_swipes'] += 1
                     self.reversal_state['last_swipe_session'] = 'asia'
             
@@ -1147,6 +1393,72 @@ class TradingBot1H3M:
             return entry_price + stop_distance
 
     def calculate_target(self, fractal):
+        """
+        Расчет целевого уровня для позиции
+        """
+        if fractal is None:
+            logger.warning("Фрактал не предоставлен для calculate_target.")
+            return None
+
+        # Убедимся, что data_3m не пустой и содержит столбец 'close'
+        if self.data_3m is None or self.data_3m.empty or 'close' not in self.data_3m.columns:
+            logger.error("data_3m пуст или не содержит столбец 'close'. Невозможно рассчитать цель.")
+            return None
+        
+        current_price = float(self.data_3m['close'].iloc[-1])
+
+        # Определяем направление и ищем цель
+        if self.current_context == 'long':
+            # Для лонга ищем подходящий максимум в пределах max_target_points
+            # Цель должна быть выше текущей цены
+            max_potential_target_price = current_price + (self.max_target_points * self.point_size)
+            
+            # Рассматриваем недавние максимумы на 1H графике (например, за последние 48 часов)
+            recent_highs = self.data_1h['high'].tail(48) 
+            
+            # Фильтруем максимумы: они должны быть выше текущей цены и не дальше max_potential_target_price
+            valid_highs = recent_highs[(recent_highs > current_price) & (recent_highs <= max_potential_target_price)]
+            
+            if not valid_highs.empty:
+                # Берем самый ближний к текущей цене валидный максимум (или самый высокий, в зависимости от стратегии)
+                # В данном случае, давайте возьмем самый высокий из доступных в пределах лимита
+                calculated_target = valid_highs.max()
+                logger.info(f"Long Target: Найдена цель по историческим максимумам: {calculated_target}")
+                return float(calculated_target)
+            else:
+                # Если не нашли подходящую цель в исторических данных,
+                # используем максимальное допустимое расстояние от текущей цены
+                calculated_target = max_potential_target_price
+                logger.info(f"Long Target: Используется максимальное расстояние от текущей цены: {calculated_target}")
+                return float(calculated_target)
+
+        elif self.current_context == 'short':
+            # Для шорта ищем подходящий минимум в пределах max_target_points
+            # Цель должна быть ниже текущей цены
+            min_potential_target_price = current_price - (self.max_target_points * self.point_size)
+            
+            # Рассматриваем недавние минимумы на 1H графике
+            recent_lows = self.data_1h['low'].tail(48)
+            
+            # Фильтруем минимумы: они должны быть ниже текущей цены и не ближе min_potential_target_price
+            valid_lows = recent_lows[(recent_lows < current_price) & (recent_lows >= min_potential_target_price)]
+            
+            if not valid_lows.empty:
+                # Берем самый ближний к текущей цене валидный минимум (или самый низкий)
+                # В данном случае, давайте возьмем самый низкий из доступных в пределах лимита
+                calculated_target = valid_lows.min()
+                logger.info(f"Short Target: Найдена цель по историческим минимумам: {calculated_target}")
+                return float(calculated_target)
+            else:
+                # Если не нашли подходящую цель в исторических данных,
+                # используем максимальное допустимое расстояние от текущей цены
+                calculated_target = min_potential_target_price
+                logger.info(f"Short Target: Используется максимальное расстояние от текущей цены: {calculated_target}")
+                return float(calculated_target)
+        else:
+            logger.warning(f"Неизвестный контекст рынка: {self.current_context} в calculate_target.")
+            return None
+
         """
         Расчет целевого уровня для позиции
         """
@@ -1470,7 +1782,7 @@ class TradingBot1H3M:
                 print_session_status()
                 
                 # Проверяем наличие сигналов
-                entry_signals = bot.find_entry_points()
+                entry_signals = bot.find_entry_signals()
                 logging.info(f'Найденные сигналы: {entry_signals}')
                 
                 # Выводим информацию о сигналах
@@ -1510,7 +1822,7 @@ class TradingBot1H3M:
                     bot.fetch_data()
                     bot.analyze_market_context(bot.data_3m)
                     bot.update_daily_limit()
-                    bot.find_entry_points()
+                    bot.find_entry_signals()
                 
                 elif choice == '2':
                     if entry_signals:
@@ -1557,90 +1869,142 @@ class TradingBot1H3M:
 
     def visualize_strategy(self, save_path=None):
         """
-        Визуализация текущего состояния стратегии
+        Визуализация текущего состояния стратегии с использованием свечных графиков.
         """
+        # Проверка наличия данных перед использованием
+        if self.data_1h is None or self.data_1h.empty or self.data_3m is None or self.data_3m.empty:
+            logger.error("Данные data_1h или data_3m не загружены или пусты. Визуализация невозможна.")
+            fig, ax = plt.subplots()
+            ax.text(0.5, 0.5, "Данные для графика отсутствуют", ha='center', va='center')
+            if save_path:
+                plt.savefig(save_path)
+                logger.info(f"Пустой график сохранен в {save_path}")
+            else:
+                plt.show()
+            return fig
+
+        # Подготовка данных для mplfinance
+        recent_1h_ohlc = self.data_1h.tail(48).copy()
+        if not recent_1h_ohlc.empty:
+            recent_1h_ohlc.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
+            if recent_1h_ohlc.index.tzinfo is None:
+                recent_1h_ohlc.index = recent_1h_ohlc.index.tz_localize('UTC')
+            else:
+                recent_1h_ohlc.index = recent_1h_ohlc.index.tz_convert('UTC')
+        else:
+            logger.warning("recent_1h_ohlc пуст после tail(48).")
+
+        recent_3m_ohlc = self.data_3m.tail(100).copy()
+        if not recent_3m_ohlc.empty:
+            recent_3m_ohlc.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
+            if recent_3m_ohlc.index.tzinfo is None:
+                recent_3m_ohlc.index = recent_3m_ohlc.index.tz_localize('UTC')
+            else:
+                recent_3m_ohlc.index = recent_3m_ohlc.index.tz_convert('UTC')
+        else:
+            logger.warning("recent_3m_ohlc пуст после tail(100).")
+
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12), gridspec_kw={'height_ratios': [3, 1]})
-        
-        # Часовой график
-        recent_1h = self.data_1h.tail(48)  # Последние 2 дня
-        ax1.plot(recent_1h.index, recent_1h['close'], label='Цена закрытия (1H)', color='blue')
-        
-        # Отмечаем фракталы
-        bullish_fractals, bearish_fractals = self.identify_fractals(recent_1h)
-        
-        for f in bullish_fractals:
-            ax1.scatter(f['timestamp'], f['price'], color='green', marker='^', s=100)
-        
-        for f in bearish_fractals:
-            ax1.scatter(f['timestamp'], f['price'], color='red', marker='v', s=100)
-        
-        # Отмечаем DL
-        if self.daily_limit:
-            ax1.axhline(y=self.daily_limit, color='purple', linestyle='--', label='Дневной лимит (DL)')
-        
-        # Отмечаем текущий контекст
-        if self.current_context:
-            context_color = 'green' if self.current_context == 'long' else 'red'
-            ax1.text(recent_1h.index[0], recent_1h['close'].min(), 
-                     f"Контекст: {self.current_context.upper()}", 
-                     color=context_color, fontsize=14)
-        
-        # Отмечаем открытые позиции
-        for pos in self.open_positions:
-            marker = '^' if pos['direction'] == 'long' else 'v'
-            color = 'green' if pos['direction'] == 'long' else 'red'
+        mc_style = mpf.make_marketcolors(up='g', down='r', inherit=True)
+        s = mpf.make_mpf_style(marketcolors=mc_style, gridstyle=':', y_on_right=False)
+
+        # --- Часовой график (ax1) ---
+        if not recent_1h_ohlc.empty:
+            logger.info("--- Информация о recent_1h_ohlc перед построением графика ---")
+            logger.info(f"recent_1h_ohlc.index.name: {recent_1h_ohlc.index.name}, recent_1h_ohlc.shape: {recent_1h_ohlc.shape}")
+            # Логирование .info() требует StringIO для захвата вывода
+            import io
+            buffer = io.StringIO()
+            recent_1h_ohlc.info(buf=buffer)
+            logger.info(buffer.getvalue())
+            logger.info(f"recent_1h_ohlc.head():\n{recent_1h_ohlc.head().to_string()}")
             
-            # Находим ближайшую дату к времени входа
-            closest_date = min(recent_1h.index, key=lambda d: abs(d - pos['entry_time']))
+            ohlc_columns = ['Open', 'High', 'Low', 'Close']
+            if any(col not in recent_1h_ohlc.columns for col in ohlc_columns):
+                logger.error(f"Одна или несколько колонок OHLC отсутствуют в recent_1h_ohlc. Имеющиеся колонки: {recent_1h_ohlc.columns.tolist()}")
+                ax1.text(0.5, 0.5, "Ошибка: Отсутствуют колонки OHLC для 1H графика", ha='center', va='center', transform=ax1.transAxes, color='red')
+            elif recent_1h_ohlc[ohlc_columns].isnull().all().all():
+                logger.error("Все OHLC данные в recent_1h_ohlc являются NaN. Свечи не могут быть построены.")
+                ax1.text(0.5, 0.5, "Нет валидных OHLC данных для 1H графика", ha='center', va='center', transform=ax1.transAxes)
+            elif recent_1h_ohlc[ohlc_columns].isnull().any().any():
+                logger.warning("В OHLC данных для recent_1h_ohlc присутствуют NaN значения.")
+                logger.warning(f"Количество NaN в recent_1h_ohlc:\n{recent_1h_ohlc[ohlc_columns].isnull().sum()}")
+                mpf.plot(recent_1h_ohlc, type='candle', ax=ax1, style=s, ylabel="Цена (1H)") # Пытаемся построить несмотря на NaN
+            else:
+                logger.info("Данные recent_1h_ohlc выглядят нормально для построения свечного графика.")
+                mpf.plot(recent_1h_ohlc, type='candle', ax=ax1, style=s, ylabel="Цена (1H)")
             
-            ax1.scatter(closest_date, pos['entry_price'], color=color, marker=marker, s=200, edgecolors='black')
-            ax1.axhline(y=pos['target'], color=color, linestyle='-.', alpha=0.7)
-            ax1.axhline(y=pos['stop_loss'], color='black', linestyle=':', alpha=0.7)
-        
-        # 3-минутный график
-        recent_3m = self.data_3m.tail(100)  # Последние 100 3-минутных свечей
-        ax2.plot(recent_3m.index, recent_3m['close'], label='Цена закрытия (3M)', color='orange')
-        
-        # Отмечаем скип-ситуации
-        for skip in self.skip_conditions:
-            closest_date = min(recent_3m.index, key=lambda d: abs(d - skip['timestamp']))
-            ax2.scatter(closest_date, recent_3m.loc[closest_date, 'close'], 
-                       color='gray', marker='x', s=150)
+            ax1.set_title(f"Стратегия 1H3M для {self.symbol} (1H)", fontsize=14)
+
+            # Отмечаем фракталы на 1H графике
+            bullish_fractals_1h_display, bearish_fractals_1h_display = self.identify_fractals(self.data_1h.tail(48))
+            for f_bullish in bullish_fractals_1h_display:
+                f_timestamp_aware = pd.Timestamp(f_bullish['timestamp'])
+                if f_timestamp_aware.tzinfo is None: f_timestamp_aware = f_timestamp_aware.tz_localize('UTC')
+                else: f_timestamp_aware = f_timestamp_aware.tz_convert('UTC')
+                if f_timestamp_aware in recent_1h_ohlc.index:
+                     ax1.scatter(f_timestamp_aware, f_bullish['price'], color='lime', marker='^', s=100, edgecolors='black', zorder=5)
+            for f_bearish in bearish_fractals_1h_display:
+                f_timestamp_aware = pd.Timestamp(f_bearish['timestamp'])
+                if f_timestamp_aware.tzinfo is None: f_timestamp_aware = f_timestamp_aware.tz_localize('UTC')
+                else: f_timestamp_aware = f_timestamp_aware.tz_convert('UTC')
+                if f_timestamp_aware in recent_1h_ohlc.index:
+                    ax1.scatter(f_timestamp_aware, f_bearish['price'], color='red', marker='v', s=100, edgecolors='black', zorder=5)
             
-            # Добавляем текст с причинами
-            reasons_text = '\n'.join(skip['reasons'][:2])  # Показываем максимум 2 причины
-            ax2.annotate(reasons_text, 
-                        xy=(closest_date, recent_3m.loc[closest_date, 'close']),
-                        xytext=(10, -30),
-                        textcoords='offset points',
-                        fontsize=8,
-                        bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7))
+            if self.daily_limit is not None:
+                ax1.axhline(y=self.daily_limit, color='purple', linestyle='--', label=f'Дневной лимит (DL): {self.daily_limit:.5f}', zorder=3)
+            
+            if self.current_context:
+                context_color = 'green' if self.current_context == 'long' else 'red'
+                # Проверка на случай если recent_1h_ohlc все же пуст на этом этапе (хотя не должен быть)
+                if not recent_1h_ohlc.empty:
+                     y_pos_context = recent_1h_ohlc['Low'].min() - (recent_1h_ohlc['High'].max() - recent_1h_ohlc['Low'].min()) * 0.05 
+                     ax1.text(recent_1h_ohlc.index[0], y_pos_context,
+                              f"Контекст: {self.current_context.upper()}", 
+                              color=context_color, fontsize=14, bbox=dict(facecolor='white', alpha=0.5, pad=2))
+            
+            for pos in self.open_positions:
+                marker = '^' if pos['direction'] == 'long' else 'v'
+                color = 'green' if pos['direction'] == 'long' else 'red'
+                entry_time_original = pd.Timestamp(pos['entry_time'])
+                if entry_time_original.tzinfo is None: entry_time_aware = entry_time_original.tz_localize('UTC')
+                else: entry_time_aware = entry_time_original.tz_convert('UTC')
+                if not recent_1h_ohlc.empty and recent_1h_ohlc.index[0] <= entry_time_aware <= recent_1h_ohlc.index[-1]:
+                    closest_date_1h = recent_1h_ohlc.index.asof(entry_time_aware)
+                    if closest_date_1h is not pd.NaT:
+                        ax1.scatter(closest_date_1h, pos['entry_price'], color=color, marker=marker, s=200, edgecolors='black', zorder=5)
+                        ax1.axhline(y=pos['target'], color=color, linestyle='-.', alpha=0.7, label=f"Цель: {pos['target']:.5f}", zorder=3)
+                        ax1.axhline(y=pos['stop_loss'], color='gray', linestyle=':', alpha=0.7, label=f"Стоп: {pos['stop_loss']:.5f}", zorder=3)
+            
+            handles, labels = ax1.get_legend_handles_labels()
+            by_label = dict(zip(labels, handles)) 
+            if by_label: ax1.legend(by_label.values(), by_label.keys(), loc='upper left')
+        else:
+            ax1.text(0.5, 0.5, "Нет данных для 1H графика", ha='center', va='center', transform=ax1.transAxes)
+            ax1.set_title(f"Стратегия 1H3M для {self.symbol} (1H) - Нет данных", fontsize=14)
+
+        # --- 3-минутный график (ax2) ---
+        if not recent_3m_ohlc.empty:
+            mpf.plot(recent_3m_ohlc, type='candle', ax=ax2, style=s, ylabel="Цена (3M)")
+            ax2.set_title("3-минутный график", fontsize=12)
+            for skip in self.skip_conditions:
+                skip_timestamp_original = pd.Timestamp(skip['timestamp'])
+                if skip_timestamp_original.tzinfo is None: skip_time_aware = skip_timestamp_original.tz_localize('UTC')
+                else: skip_time_aware = skip_timestamp_original.tz_convert('UTC')
+                if not recent_3m_ohlc.empty and recent_3m_ohlc.index[0] <= skip_time_aware <= recent_3m_ohlc.index[-1]:
+                    closest_date_3m = recent_3m_ohlc.index.asof(skip_time_aware)
+                    if closest_date_3m is not pd.NaT and closest_date_3m in recent_3m_ohlc.index:
+                        price_at_skip = recent_3m_ohlc.loc[closest_date_3m, 'Close'] 
+                        ax2.scatter(closest_date_3m, price_at_skip, color='orange', marker='x', s=150, zorder=5)
+                        reasons_text = '\n'.join(skip['reasons'][:2]) 
+                        ax2.annotate(reasons_text, xy=(closest_date_3m, price_at_skip), xytext=(10, -30), 
+                                     textcoords='offset points', fontsize=8,
+                                     bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7, ec="black"), zorder=6)
+        else:
+            ax2.text(0.5, 0.5, "Нет данных для 3M графика", ha='center', va='center', transform=ax2.transAxes)
+            ax2.set_title("3-минутный график - Нет данных", fontsize=12)
         
-        # Форматирование осей
-        ax1.set_title(f"Стратегия 1H3M для {self.symbol}", fontsize=16)
-        ax1.set_ylabel("Цена", fontsize=12)
-        ax1.grid(True, alpha=0.3)
-        ax1.legend(loc='upper left')
-        
-        ax2.set_title("3-минутный график", fontsize=14)
-        ax2.set_xlabel("Время", fontsize=12)
-        ax2.set_ylabel("Цена", fontsize=12)
-        ax2.grid(True, alpha=0.3)
-        ax2.legend(loc='upper left')
-        
-        # Форматирование дат на оси X
-        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
-        ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-        
-        # Поворот меток
-        plt.setp(ax1.xaxis.get_majorticklabels(), rotation=45)
-        plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45)
-        
-        plt.tight_layout()
-        
-        # Сохранение графика, если указан путь
-        if save_path:
-            plt.savefig(save_path)
-            logger.info(f"График сохранен в {save_path}")
-        
+        fig.tight_layout() 
+        if save_path: plt.savefig(save_path)
+        else: plt.show() 
         return fig
