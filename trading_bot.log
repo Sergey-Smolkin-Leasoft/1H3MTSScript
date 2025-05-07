@@ -5379,3 +5379,601 @@ memory usage: 2.1 KB
 2025-05-07 11:05:27,304 - 1H3M_TradingBot - INFO - Не найдены свечи Франкфуртской сессии для проверки Frankfurt manipulation setup.
 2025-05-07 11:05:27,304 - 1H3M_TradingBot - INFO - Long Target: Используется максимальное расстояние от текущей цены: 1.136381471063193
 2025-05-07 11:05:27,306 - 1H3M_TradingBot - INFO - Long Target: Используется максимальное расстояние от текущей цены: 1.136381471063193
+2025-05-07 16:27:57,116 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-07 16:27:57,135 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:27:57,135 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:27:57,203 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:27:57,255 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:27:57,255 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:27:57,316 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:27:57,317 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:27:57,317 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:27:57,318 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:27:57,318 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:02,327 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:02,327 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:02,396 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:02,397 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:02,398 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:02,457 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:02,458 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:02,458 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:02,458 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:02,458 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:07,470 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:07,470 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:07,579 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:07,581 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:07,582 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:07,644 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:07,646 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:07,648 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:07,648 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:07,648 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:12,660 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:12,660 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:12,722 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:12,724 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:12,727 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:12,793 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:12,795 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:12,796 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:12,796 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:12,796 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:17,810 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:17,810 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:17,868 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:17,869 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 1H. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:17,869 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:17,927 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+2025-05-07 16:28:17,928 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 59, in _raise_error
+    raise BadRequestError(message)
+twelvedata.exceptions.BadRequestError: Invalid **interval** provided: 3M. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month
+
+2025-05-07 16:28:17,929 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:17,929 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:17,929 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:22,946 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:22,946 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:23,057 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 9 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:23,059 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 9 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:23,059 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:23,128 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 10 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:23,129 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 10 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:23,129 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:23,129 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:23,129 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:28,137 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:28,137 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:28,199 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 11 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:28,200 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 11 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:28,200 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:28,259 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 12 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:28,260 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 12 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:28,260 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:28,260 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:28,261 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:33,268 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:33,268 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:33,327 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 13 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:33,328 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 13 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:33,328 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:33,388 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 14 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:33,389 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 14 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:33,389 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:33,389 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:33,389 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:38,397 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:38,397 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:38,464 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 15 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:38,465 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 15 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:38,465 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:38,530 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 16 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:38,531 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 16 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:38,531 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:38,531 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:38,531 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:43,564 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:43,564 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:43,634 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 17 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:43,636 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 17 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:43,638 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:43,713 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 18 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:43,716 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 18 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:43,720 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:43,720 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:43,721 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:28:48,732 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:28:48,733 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:28:48,795 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 19 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:48,796 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 19 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:48,796 - 1H3M_TradingBot - INFO - Запрос данных для EUR/USD, интервал 3M, лимит 500
+2025-05-07 16:28:48,857 - 1H3M_TradingBot - ERROR - Ошибка при получении или обработке данных с Twelve Data для EUR/USD: You have run out of API credits for the current minute. 20 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+2025-05-07 16:28:48,858 - 1H3M_TradingBot - ERROR - Traceback (most recent call last):
+  File "D:\mytsscript\main.py", line 204, in fetch_historical_data
+    data = ts.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\time_series.py", line 114, in as_pandas
+    df = self.price_endpoint.as_pandas()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 47, in as_pandas
+    data = self.as_json()
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\mixins.py", line 12, in as_json
+    resp = self.execute(format="JSON")
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\endpoints.py", line 319, in execute
+    return self.ctx.http_client.get(endpoint, params=params)
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 51, in get
+    self._raise_error(error_code, message)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Gigabyte\AppData\Local\Programs\Python\Python313\Lib\site-packages\twelvedata\http_client.py", line 64, in _raise_error
+    raise TwelveDataError(message)
+twelvedata.exceptions.TwelveDataError: You have run out of API credits for the current minute. 20 API credits were used, with the current limit being 8. Wait for the next minute or consider switching to a higher tier plan at https://twelvedata.com/pricing
+
+2025-05-07 16:28:48,858 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:28:48,858 - 1H3M_TradingBot - ERROR - Ошибка при проверке горизонтального тренда: 'NoneType' object is not subscriptable
+2025-05-07 16:28:48,858 - 1H3M_TradingBot - INFO - Тренд не горизонтальный (наклон: 0.000000, R²: 0.00)
+2025-05-07 16:33:29,786 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-07 16:33:29,808 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:33:29,808 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:33:34,894 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:33:34,894 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1H, лимит 500
+2025-05-07 16:38:02,271 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-07 16:38:02,282 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:38:02,282 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:38:02,510 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:38:02,510 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:38:02,569 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 2 секунд.
+2025-05-07 16:38:04,570 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 2/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:38:04,630 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 4 секунд.
+2025-05-07 16:38:08,630 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 3/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:38:08,725 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 8 секунд.
+2025-05-07 16:38:16,725 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 4/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:38:16,808 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 16 секунд.
+2025-05-07 16:40:30,470 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-07 16:40:30,493 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:40:30,493 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:40:30,606 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:40:30,606 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:40:30,658 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 2 секунд.
+2025-05-07 16:40:32,660 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 2/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:40:32,720 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 4 секунд.
+2025-05-07 16:40:36,721 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 3/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:40:36,778 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 8 секунд.
+2025-05-07 16:40:44,778 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 4/5) для EUR/USD, интервал 3m, лимит 500
+2025-05-07 16:40:44,851 - 1H3M_TradingBot - WARNING - TwelveData API лимит исчерпан: Invalid **interval** provided: 3m. Supported intervals: 1min, 5min, 15min, 30min, 45min, 1h, 2h, 4h, 8h, 1day, 1week, 1month. Повторная попытка через 16 секунд.
+2025-05-07 16:43:34,037 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-07 16:43:34,050 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:43:34,051 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:43:36,239 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:43:36,240 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:43:36,240 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:43:36,240 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:43:36,240 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:43:41,251 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:43:41,251 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:43:41,326 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:43:41,326 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:43:41,326 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:43:41,326 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:43:41,326 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:43:46,334 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:43:46,334 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:43:46,412 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:43:46,427 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:43:46,428 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:43:46,428 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:43:46,428 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:43:51,436 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:43:51,436 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:43:51,503 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:43:51,503 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:43:51,503 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:43:51,504 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:43:51,504 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:43:56,516 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:43:56,517 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:43:56,583 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:43:56,583 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:43:56,583 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:43:56,583 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:43:56,583 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:44:01,604 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:44:01,604 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:44:01,674 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:44:01,674 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:44:01,674 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:44:01,674 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:44:01,674 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:47:11,875 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-07 16:47:11,892 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:47:11,893 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:47:11,964 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:47:11,964 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:47:11,964 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:47:11,964 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:47:11,964 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:47:11,965 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно найти сигналы входа.
+2025-05-07 16:47:30,643 - 1H3M_TradingBot - ERROR - Данные data_1h или data_3m не загружены или пусты. Визуализация невозможна.
+2025-05-07 16:47:31,535 - 1H3M_TradingBot - INFO - Пустой график сохранен в strategy_chart.png
+2025-05-07 16:47:33,543 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-07 16:47:33,543 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-07 16:47:33,623 - 1H3M_TradingBot - ERROR - Колонка 'timestamp' отсутствует в данных после переименования.
+2025-05-07 16:47:33,623 - 1H3M_TradingBot - ERROR - Неподдерживаемый таймфрейм для Twelve Data: 5min
+2025-05-07 16:47:33,623 - 1H3M_TradingBot - ERROR - Не удалось загрузить данные для одного или обоих таймфреймов.
+2025-05-07 16:47:33,623 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.
+2025-05-07 16:47:33,623 - 1H3M_TradingBot - WARNING - Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.
+2025-05-07 16:47:33,624 - 1H3M_TradingBot - WARNING - Данные 1H или 3M не загружены. Невозможно найти сигналы входа.

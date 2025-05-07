@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 import time
 from ta.trend import SMAIndicator
 import logging
-from twelvedata import TDClient
+import twelvedata 
+from twelvedata import TDClient 
 from dotenv import load_dotenv
 import os
 from sklearn.linear_model import LinearRegression
@@ -30,7 +31,7 @@ class TradingBot1H3M:
     """
     Торговый бот, реализующий стратегию 1H3M
     """
-    def __init__(self, symbol, timeframe_1h='1h', timeframe_3m='3m'): # Убран параметр exchange
+    def __init__(self, symbol, timeframe_1h='1h', timeframe_3m='5min'):
         """
         Инициализация бота
         
@@ -176,13 +177,13 @@ class TradingBot1H3M:
 
     def fetch_historical_data(self, timeframe, limit=500):
         """
-        Загрузка исторических данных с Twelve Data
+        Загрузка исторических данных с Twelve Data с обработкой лимита API
         """
         td_timeframe_map = {
-            '1h': '1H',
-            '3m': '3M'
-            # Добавьте другие таймфреймы при необходимости
-        }
+            '1h': '1h', 
+            '3m': '3m' 
+        }   
+
         td_timeframe = td_timeframe_map.get(timeframe)
         if not td_timeframe:
             logger.error(f"Неподдерживаемый таймфрейм для Twelve Data: {timeframe}")
@@ -192,65 +193,66 @@ class TradingBot1H3M:
         if not symbol_to_fetch:
             logger.error(f"Символ {self.symbol} не найден в symbol_mapping.")
             return None
-        
-        try:
-            logger.info(f"Запрос данных для {symbol_to_fetch}, интервал {td_timeframe}, лимит {limit}")
-            ts = self.td.time_series(
-                symbol=symbol_to_fetch,
-                interval=td_timeframe,
-                outputsize=limit,
-                timezone='UTC'
-            )
-            data = ts.as_pandas()
-            
-            if data is None or data.empty:
-                logger.warning(f"Получены пустые данные от Twelve Data для {symbol_to_fetch}, интервал {td_timeframe}.")
-                return None
 
-            data = data.rename(columns={
-                'datetime': 'timestamp', # Убедитесь, что API возвращает 'datetime'
-                # Остальные переименования остаются как есть
-                'open': 'open',
-                'high': 'high',
-                'low': 'low',
-                'close': 'close',
-                'volume': 'volume'
-            })
-            
-            # Проверка наличия колонки 'timestamp' после переименования
-            if 'timestamp' not in data.columns:
-                logger.error("Колонка 'timestamp' отсутствует в данных после переименования.")
-                # Попытка найти оригинальное имя колонки даты/времени, если 'datetime' не сработало
-                # Это может потребовать более глубокого анализа ответа API или документации Twelve Data
-                # Например, если API возвращает 'date' или другое имя.
-                # Для примера, если бы это было 'date':
-                # if 'date' in data.columns:
-                #    data.rename(columns={'date': 'timestamp'}, inplace=True)
-                # else:
-                #    return None # Если не можем найти колонку времени
-                return None
+        # Добавляем цикл для повторных попыток в случае ошибки лимита
+        retries = 5
+        for attempt in range(retries):
+            try:
+                logger.info(f"Запрос данных (Попытка {attempt + 1}/{retries}) для {symbol_to_fetch}, интервал {td_timeframe}, лимит {limit}")
+                ts = self.td.time_series(
+                    symbol=symbol_to_fetch,
+                    interval=td_timeframe,
+                    outputsize=limit,
+                    timezone='UTC'
+                )
+                data = ts.as_pandas()
 
+                if data is None or data.empty:
+                    logger.warning(f"Получены пустые данные от Twelve Data для {symbol_to_fetch}, интервал {td_timeframe}.")
+                    return None
 
-            data['timestamp'] = pd.to_datetime(data['timestamp'])
-            data.set_index('timestamp', inplace=True)
-            data.sort_index(inplace=True) # Убедимся, что данные отсортированы по времени
-            
-            # Преобразование колонок OHLCV в числовой тип, если они еще не такие
-            for col in ['open', 'high', 'low', 'close', 'volume']:
-                if col in data.columns:
-                    data[col] = pd.to_numeric(data[col], errors='coerce')
+                data = data.rename(columns={
+                    'datetime': 'timestamp', # Убедитесь, что API возвращает 'datetime'
+                    'open': 'open',
+                    'high': 'high',
+                    'low': 'low',
+                    'close': 'close',
+                    'volume': 'volume'
+                })
+
+                if 'timestamp' not in data.columns:
+                    logger.error("Колонка 'timestamp' отсутствует в данных после переименования.")
+                    return None
+
+                data['timestamp'] = pd.to_datetime(data['timestamp'])
+                data.set_index('timestamp', inplace=True)
+                data.sort_index(inplace=True)
+
+                for col in ['open', 'high', 'low', 'close', 'volume']:
+                    if col in data.columns:
+                        data[col] = pd.to_numeric(data[col], errors='coerce')
+                    else:
+                        logger.warning(f"Колонка {col} отсутствует в полученных данных для {symbol_to_fetch}.")
+
+                logger.info(f"Успешно загружены и обработаны данные для {symbol_to_fetch}, интервал {td_timeframe}.")
+                # Добавляем небольшую задержку после успешного запроса, чтобы не превышать лимит
+                time.sleep(1) # Задержка в 1 секунду
+                return data
+
+            except twelvedata.exceptions.TwelveDataError as e:
+                logger.warning(f"TwelveData API лимит исчерпан: {e}. Повторная попытка через {2**(attempt+1)} секунд.")
+                if attempt < retries - 1:
+                    time.sleep(2**(attempt+1)) # Экспоненциальная выдержка: 2, 4, 8, 16, 32 секунды
                 else:
-                    logger.warning(f"Колонка {col} отсутствует в полученных данных для {symbol_to_fetch}.")
+                    logger.error(f"Превышено максимальное количество повторных попыток для TwelveData API.")
+                    return None
+            except Exception as e:
+                logger.error(f"Ошибка при получении или обработке данных с Twelve Data для {symbol_to_fetch}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                return None
 
-
-            logger.info(f"Успешно загружены и обработаны данные для {symbol_to_fetch}, интервал {td_timeframe}.")
-            return data
-            
-        except Exception as e:
-            logger.error(f"Ошибка при получении или обработке данных с Twelve Data для {symbol_to_fetch}: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-            return None # Возвращаем None в случае ошибки, чтобы избежать дальнейших проблем
+        return None # Возвращаем None, если все попытки исчерпаны
 
     def generate_test_data(self, timeframe):
         """
@@ -334,6 +336,18 @@ class TradingBot1H3M:
         Returns:
         dict: Информация о тренде
         """
+        # Добавлена проверка входных данных
+        if data is None or data.empty or 'close' not in data.columns or len(data) < window:
+            logger.warning("Недостаточно данных для проверки горизонтального тренда или отсутствуют необходимые колонки.")
+            return {
+                'is_horizontal': False,
+                'confidence': 0.0,
+                'slope': 0.0,
+                'r_squared': 0.0,
+                'std_dev': 0.0,
+                'p_value': 1.0
+            }
+            
         try:
             prices = data['close'].tail(window).values
             time_index = np.arange(len(prices)).reshape(-1, 1)
@@ -380,7 +394,13 @@ class TradingBot1H3M:
         Parameters:
         recent_data: DataFrame с последними ценовыми данными
         """
-        # Проверка горизонтального тренда
+        # Добавлена проверка наличия данных
+        if self.data_1h is None or self.data_3m is None:
+            logger.warning("Данные 1H или 3M не загружены. Невозможно провести анализ контекста рынка.")
+            self.current_context = None # Сбрасываем контекст, если данных нет
+            return self.current_context
+
+        # Проверка горизонтального тренда (метод check_horizontal_trend уже модифицирован для проверки входных данных)
         trend_info = self.check_horizontal_trend(recent_data)
         
         # Логирование информации о тренде
@@ -395,9 +415,13 @@ class TradingBot1H3M:
         
         # Проверяем SSL/BSL на разных таймфреймах
         for timeframe_name, timeframe_hours in self.timeframes.items():
-            timeframe_data = self.data_1h.tail(timeframe_hours)
-            self.ssl_bsl_levels.extend(self.check_ssl_bsl(timeframe_data, timeframe_name))
-        
+            # Добавлена проверка на достаточное количество данных перед использованием tail
+            if len(self.data_1h) >= timeframe_hours:
+                timeframe_data = self.data_1h.tail(timeframe_hours)
+                self.ssl_bsl_levels.extend(self.check_ssl_bsl(timeframe_data, timeframe_name))
+            else:
+                 logger.warning(f"Недостаточно данных на 1H графике для анализа SSL/BSL на таймфрейме {timeframe_name}.")
+
         # Проверяем реакцию от зон POI/FVG
         self.check_poi_fvg(recent_data)
         
@@ -520,6 +544,16 @@ class TradingBot1H3M:
         Returns:
         tuple: (бычьи фракталы, медвежьи фракталы)
         """
+
+        if data is None or data.empty or 'high' not in data.columns or 'low' not in data.columns or len(data) <= window * 2:
+             logger.warning("Недостаточно данных или отсутствуют необходимые колонки для идентификации фракталов.")
+             return [], []
+
+        # Make sure we're accessing values properly
+        highs = data['high'].values
+        lows = data['low'].values
+        timestamps = data.index
+
         # Make sure we're accessing values properly
         highs = data['high'].values
         lows = data['low'].values
@@ -557,6 +591,11 @@ class TradingBot1H3M:
         Returns:
         list: Список сигналов входа
         """
+        # Получение часовых фракталов
+        if self.data_1h is None or self.data_3m is None:
+            logger.warning("Данные 1H или 3M не загружены. Невозможно найти сигналы входа.")
+            return [] # Возвращаем пустой список сигналов
+
         # Получение часовых фракталов
         bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h)
         
@@ -1736,9 +1775,14 @@ class TradingBot1H3M:
         """
         Обновление дневного лимита (DL)
         """
+        if self.data_1h is None or self.data_1h.empty:
+             logger.warning("Данные 1H не загружены или пусты. Невозможно обновить дневной лимит.")
+             self.daily_limit = None # Сбрасываем DL, если данных нет
+             return
+
         # Дневной лимит - последний локальный экстремум в противоположном направлении контекста
         today_data = self.data_1h[self.data_1h.index.date == datetime.now().date()]
-        
+
         if not today_data.empty:
             if self.current_context == 'long':
                 # В лонговом контексте DL - это минимум
@@ -1746,8 +1790,11 @@ class TradingBot1H3M:
             else:
                 # В шортовом контексте DL - это максимум
                 self.daily_limit = today_data['high'].max()
-            
+
             logger.info(f"Обновлен дневной лимит (DL): {self.daily_limit}")
+        else:
+            logger.warning("Нет данных за сегодня на 1H графике. Дневной лимит не установлен.")
+            self.daily_limit = None
 
     def run(self):
         """
