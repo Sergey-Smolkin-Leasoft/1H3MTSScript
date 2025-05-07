@@ -15,6 +15,7 @@ from sklearn.preprocessing import StandardScaler
 from scipy.stats import linregress
 from database import TradingDatabase
 import mplfinance as mpf
+import io
 
 # Настройка логирования
 logging.basicConfig(
@@ -1971,144 +1972,223 @@ class TradingBot1H3M:
                 print(f"{Fore.RED}Произошла ошибка: {e}")
                 time.sleep(5)
 
+
     def visualize_strategy(self, save_path=None):
         """
         Визуализация текущего состояния стратегии с использованием свечных графиков.
+        Акцент на отладке отображения 1H свечей.
         """
-        # Проверка наличия данных перед использованием
+        logger.info("Начало visualize_strategy")
+        data_1h_to_plot = None
+        data_3m_to_plot = None
+        ohlc_columns = ['Open', 'High', 'Low', 'Close']
+
         if self.data_1h is None or self.data_1h.empty or self.data_3m is None or self.data_3m.empty:
-            logger.error("Данные data_1h или data_3m не загружены или пусты. Визуализация невозможна.")
+            logger.error("Основные данные data_1h или data_3m не загружены или пусты. Визуализация невозможна.")
             fig, ax = plt.subplots()
             ax.text(0.5, 0.5, "Данные для графика отсутствуют", ha='center', va='center')
-            if save_path:
-                plt.savefig(save_path)
-                logger.info(f"Пустой график сохранен в {save_path}")
-            else:
-                plt.show()
+            if save_path: plt.savefig(save_path)
+            else: plt.show()
             return fig
 
-        # Подготовка данных для mplfinance
-        recent_1h_ohlc = self.data_1h.tail(48).copy()
-        if not recent_1h_ohlc.empty:
-            recent_1h_ohlc.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
-            if recent_1h_ohlc.index.tzinfo is None:
-                recent_1h_ohlc.index = recent_1h_ohlc.index.tz_localize('UTC')
-            else:
-                recent_1h_ohlc.index = recent_1h_ohlc.index.tz_convert('UTC')
-        else:
-            logger.warning("recent_1h_ohlc пуст после tail(48).")
+        # --- Подготовка данных для 1H графика ---
+        logger.info("Подготовка данных для 1H графика...")
+        temp_recent_1h_ohlc = self.data_1h.tail(48).copy()
 
-        recent_3m_ohlc = self.data_3m.tail(100).copy()
-        if not recent_3m_ohlc.empty:
-            recent_3m_ohlc.rename(columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'}, inplace=True)
-            if recent_3m_ohlc.index.tzinfo is None:
-                recent_3m_ohlc.index = recent_3m_ohlc.index.tz_localize('UTC')
+        if not temp_recent_1h_ohlc.empty:
+            logger.info(f"temp_recent_1h_ohlc исходный размер: {temp_recent_1h_ohlc.shape}")
+            temp_recent_1h_ohlc.rename(
+                columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'},
+                inplace=True,
+                errors='ignore' # Игнорировать ошибку, если колонка 'volume' отсутствует
+            )
+            
+            if temp_recent_1h_ohlc.index.tzinfo is None:
+                temp_recent_1h_ohlc.index = temp_recent_1h_ohlc.index.tz_localize('UTC')
             else:
-                recent_3m_ohlc.index = recent_3m_ohlc.index.tz_convert('UTC')
-        else:
-            logger.warning("recent_3m_ohlc пуст после tail(100).")
+                temp_recent_1h_ohlc.index = temp_recent_1h_ohlc.index.tz_convert('UTC')
+            logger.info("Таймзона для 1H данных установлена в UTC.")
 
+            # Используем только OHLC колонки, которые точно есть
+            present_ohlc_cols_1h = [col for col in ohlc_columns if col in temp_recent_1h_ohlc.columns]
+            if len(present_ohlc_cols_1h) == 4:
+                if temp_recent_1h_ohlc[present_ohlc_cols_1h].isnull().all().all():
+                    logger.error("Все значения в колонках OHLC для temp_recent_1h_ohlc являются NaN.")
+                elif temp_recent_1h_ohlc[present_ohlc_cols_1h].isnull().any().any():
+                    logger.warning(f"Обнаружены NaN в temp_recent_1h_ohlc перед очисткой. Количество NaN:\n{temp_recent_1h_ohlc[present_ohlc_cols_1h].isnull().sum().to_string()}")
+                    cleaned_data_1h = temp_recent_1h_ohlc.dropna(subset=present_ohlc_cols_1h)
+                    logger.info(f"Количество строк в 1H данных после dropna: {len(cleaned_data_1h)}")
+                    if not cleaned_data_1h.empty:
+                        data_1h_to_plot = cleaned_data_1h[present_ohlc_cols_1h]
+                        logger.info("Используются очищенные от NaN (в OHLC) данные для 1H графика.")
+                    else:
+                        logger.error("После удаления строк с NaN в OHLC, данных для 1H графика не осталось.")
+                else:
+                    logger.info("В temp_recent_1h_ohlc нет NaN в колонках OHLC. Данные готовы.")
+                    data_1h_to_plot = temp_recent_1h_ohlc[present_ohlc_cols_1h]
+            else:
+                logger.error(f"Не все OHLC колонки ({ohlc_columns}) присутствуют в temp_recent_1h_ohlc. Найдены: {temp_recent_1h_ohlc.columns.tolist()}")
+        else:
+            logger.warning("temp_recent_1h_ohlc (данные для 1H графика) пуст после tail(48).")
+
+        # --- Подготовка данных для 3M графика ---
+        logger.info("Подготовка данных для 3M графика...")
+        temp_recent_3m_ohlc = self.data_3m.tail(100).copy()
+        if not temp_recent_3m_ohlc.empty:
+            temp_recent_3m_ohlc.rename(
+                columns={'open': 'Open', 'high': 'High', 'low': 'Low', 'close': 'Close', 'volume': 'Volume'},
+                inplace=True,
+                errors='ignore'
+            )
+            if temp_recent_3m_ohlc.index.tzinfo is None: temp_recent_3m_ohlc.index = temp_recent_3m_ohlc.index.tz_localize('UTC')
+            else: temp_recent_3m_ohlc.index = temp_recent_3m_ohlc.index.tz_convert('UTC')
+            
+            present_ohlc_cols_3m = [col for col in ohlc_columns if col in temp_recent_3m_ohlc.columns]
+            if len(present_ohlc_cols_3m) == 4 and not temp_recent_3m_ohlc[present_ohlc_cols_3m].isnull().all().all():
+                data_3m_to_plot = temp_recent_3m_ohlc
+                logger.info("Данные для 3M графика подготовлены.")
+            else:
+                 logger.error(f"Проблема с OHLC колонками или все NaN в temp_recent_3m_ohlc. Найдены: {temp_recent_3m_ohlc.columns.tolist()}")
+        else:
+            logger.warning("temp_recent_3m_ohlc (данные для 3M графика) пуст после tail(100).")
+
+        # --- Построение графиков ---
+        logger.info("Начало построения графиков.")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(16, 12), gridspec_kw={'height_ratios': [3, 1]})
         mc_style = mpf.make_marketcolors(up='g', down='r', inherit=True)
         s = mpf.make_mpf_style(marketcolors=mc_style, gridstyle=':', y_on_right=False)
 
         # --- Часовой график (ax1) ---
-        if not recent_1h_ohlc.empty:
-            logger.info("--- Информация о recent_1h_ohlc перед построением графика ---")
-            logger.info(f"recent_1h_ohlc.index.name: {recent_1h_ohlc.index.name}, recent_1h_ohlc.shape: {recent_1h_ohlc.shape}")
-            # Логирование .info() требует StringIO для захвата вывода
-            import io
-            buffer = io.StringIO()
-            recent_1h_ohlc.info(buf=buffer)
-            logger.info(buffer.getvalue())
-            logger.info(f"recent_1h_ohlc.head():\n{recent_1h_ohlc.head().to_string()}")
-            
-            ohlc_columns = ['Open', 'High', 'Low', 'Close']
-            if any(col not in recent_1h_ohlc.columns for col in ohlc_columns):
-                logger.error(f"Одна или несколько колонок OHLC отсутствуют в recent_1h_ohlc. Имеющиеся колонки: {recent_1h_ohlc.columns.tolist()}")
-                ax1.text(0.5, 0.5, "Ошибка: Отсутствуют колонки OHLC для 1H графика", ha='center', va='center', transform=ax1.transAxes, color='red')
-            elif recent_1h_ohlc[ohlc_columns].isnull().all().all():
-                logger.error("Все OHLC данные в recent_1h_ohlc являются NaN. Свечи не могут быть построены.")
-                ax1.text(0.5, 0.5, "Нет валидных OHLC данных для 1H графика", ha='center', va='center', transform=ax1.transAxes)
-            elif recent_1h_ohlc[ohlc_columns].isnull().any().any():
-                logger.warning("В OHLC данных для recent_1h_ohlc присутствуют NaN значения.")
-                logger.warning(f"Количество NaN в recent_1h_ohlc:\n{recent_1h_ohlc[ohlc_columns].isnull().sum()}")
-                mpf.plot(recent_1h_ohlc, type='candle', ax=ax1, style=s, ylabel="Цена (1H)") # Пытаемся построить несмотря на NaN
-            else:
-                logger.info("Данные recent_1h_ohlc выглядят нормально для построения свечного графика.")
-                mpf.plot(recent_1h_ohlc, type='candle', ax=ax1, style=s, ylabel="Цена (1H)")
-            
-            ax1.set_title(f"Стратегия 1H3M для {self.symbol} (1H)", fontsize=14)
+        ax1.set_title(f"Стратегия 1H3M для {self.symbol} (1H)", fontsize=14)
+        if data_1h_to_plot is not None and not data_1h_to_plot.empty:
+            logger.info(f"--- Детальная информация о data_1h_to_plot ({data_1h_to_plot.shape}) перед построением свечей 1H ---")
+            log_buffer = io.StringIO() # Используем io.StringIO для захвата вывода .info()
+            data_1h_to_plot.info(buf=log_buffer)
+            logger.info(f"data_1h_to_plot.info():\n{log_buffer.getvalue()}")
+            logger.info(f"data_1h_to_plot dtypes:\n{data_1h_to_plot.dtypes.to_string()}")
+            logger.info(f"data_1h_to_plot[ohlc_columns].describe():\n{data_1h_to_plot[ohlc_columns].describe().to_string()}")
+            logger.info(f"data_1h_to_plot index is_unique: {data_1h_to_plot.index.is_unique}, is_monotonic_increasing: {data_1h_to_plot.index.is_monotonic_increasing}")
+            logger.info(f"Первые 3 строки data_1h_to_plot:\n{data_1h_to_plot.head(3).to_string()}")
+            logger.info(f"Последние 3 строки data_1h_to_plot:\n{data_1h_to_plot.tail(3).to_string()}")
 
-            # Отмечаем фракталы на 1H графике
-            bullish_fractals_1h_display, bearish_fractals_1h_display = self.identify_fractals(self.data_1h.tail(48))
-            for f_bullish in bullish_fractals_1h_display:
-                f_timestamp_aware = pd.Timestamp(f_bullish['timestamp'])
-                if f_timestamp_aware.tzinfo is None: f_timestamp_aware = f_timestamp_aware.tz_localize('UTC')
-                else: f_timestamp_aware = f_timestamp_aware.tz_convert('UTC')
-                if f_timestamp_aware in recent_1h_ohlc.index:
-                     ax1.scatter(f_timestamp_aware, f_bullish['price'], color='lime', marker='^', s=100, edgecolors='black', zorder=5)
-            for f_bearish in bearish_fractals_1h_display:
-                f_timestamp_aware = pd.Timestamp(f_bearish['timestamp'])
-                if f_timestamp_aware.tzinfo is None: f_timestamp_aware = f_timestamp_aware.tz_localize('UTC')
-                else: f_timestamp_aware = f_timestamp_aware.tz_convert('UTC')
-                if f_timestamp_aware in recent_1h_ohlc.index:
-                    ax1.scatter(f_timestamp_aware, f_bearish['price'], color='red', marker='v', s=100, edgecolors='black', zorder=5)
+            candle_heights = data_1h_to_plot['High'] - data_1h_to_plot['Low']
+            logger.info(f"Статистика по высоте свечей (High - Low) для 1H:\n{candle_heights.describe().to_string()}")
+            body_heights = abs(data_1h_to_plot['Close'] - data_1h_to_plot['Open'])
+            logger.info(f"Статистика по высоте тела свечей (|Close - Open|) для 1H:\n{body_heights.describe().to_string()}")
+
+            try:
+                mpf.plot(data_1h_to_plot, type='candle', ax=ax1, style=s, ylabel="Цена (1H)", show_nontrading=False)
+                logger.info("Свечи для 1H графика успешно отрисованы (или команда выполнена).")
+            except Exception as e:
+                logger.error(f"Ошибка при вызове mpf.plot для 1H графика: {e}", exc_info=True)
+                ax1.text(0.5, 0.5, "Ошибка отрисовки свечей 1H", ha='center', va='center', color='red', transform=ax1.transAxes)
             
+            # Остальной код для ax1 (фракталы, уровни и т.д.)
+            bullish_fractals_1h, bearish_fractals_1h = self.identify_fractals(self.data_1h.tail(48))
+            for f_bullish in bullish_fractals_1h:
+                f_ts = pd.Timestamp(f_bullish['timestamp'], tz='UTC')
+                if f_ts in data_1h_to_plot.index:
+                     ax1.scatter(f_ts, f_bullish['price'], color='lime', marker='^', s=60, edgecolors='black', zorder=5, label='Бычий фрактал' if 'Бычий фрактал' not in ax1.get_legend_handles_labels()[1] else "")
+            for f_bearish in bearish_fractals_1h:
+                f_ts = pd.Timestamp(f_bearish['timestamp'], tz='UTC')
+                if f_ts in data_1h_to_plot.index:
+                    ax1.scatter(f_ts, f_bearish['price'], color='red', marker='v', s=60, edgecolors='black', zorder=5, label='Медвежий фрактал' if 'Медвежий фрактал' not in ax1.get_legend_handles_labels()[1] else "")
+
             if self.daily_limit is not None:
-                ax1.axhline(y=self.daily_limit, color='purple', linestyle='--', label=f'Дневной лимит (DL): {self.daily_limit:.5f}', zorder=3)
-            
-            if self.current_context:
-                context_color = 'green' if self.current_context == 'long' else 'red'
-                # Проверка на случай если recent_1h_ohlc все же пуст на этом этапе (хотя не должен быть)
-                if not recent_1h_ohlc.empty:
-                     y_pos_context = recent_1h_ohlc['Low'].min() - (recent_1h_ohlc['High'].max() - recent_1h_ohlc['Low'].min()) * 0.05 
-                     ax1.text(recent_1h_ohlc.index[0], y_pos_context,
-                              f"Контекст: {self.current_context.upper()}", 
-                              color=context_color, fontsize=14, bbox=dict(facecolor='white', alpha=0.5, pad=2))
-            
-            for pos in self.open_positions:
-                marker = '^' if pos['direction'] == 'long' else 'v'
-                color = 'green' if pos['direction'] == 'long' else 'red'
-                entry_time_original = pd.Timestamp(pos['entry_time'])
-                if entry_time_original.tzinfo is None: entry_time_aware = entry_time_original.tz_localize('UTC')
-                else: entry_time_aware = entry_time_original.tz_convert('UTC')
-                if not recent_1h_ohlc.empty and recent_1h_ohlc.index[0] <= entry_time_aware <= recent_1h_ohlc.index[-1]:
-                    closest_date_1h = recent_1h_ohlc.index.asof(entry_time_aware)
-                    if closest_date_1h is not pd.NaT:
-                        ax1.scatter(closest_date_1h, pos['entry_price'], color=color, marker=marker, s=200, edgecolors='black', zorder=5)
-                        ax1.axhline(y=pos['target'], color=color, linestyle='-.', alpha=0.7, label=f"Цель: {pos['target']:.5f}", zorder=3)
-                        ax1.axhline(y=pos['stop_loss'], color='gray', linestyle=':', alpha=0.7, label=f"Стоп: {pos['stop_loss']:.5f}", zorder=3)
+                ax1.axhline(y=self.daily_limit, color='purple', linestyle='--', label=f'ДЛ: {self.daily_limit:.5f}', zorder=3)
+
+            if self.current_context and not data_1h_to_plot.empty:
+                 y_min_text = data_1h_to_plot['Low'].min()
+                 y_max_text = data_1h_to_plot['High'].max()
+                 ax1.text(data_1h_to_plot.index[0], y_min_text - (y_max_text - y_min_text) * 0.05, 
+                          f"Контекст: {self.current_context.upper()}",
+                          color=('green' if self.current_context == 'long' else 'red'), 
+                          fontsize=10, bbox=dict(facecolor='white', alpha=0.7, pad=2))
+
+            for pos_idx, pos in enumerate(self.open_positions):
+                entry_ts = pd.Timestamp(pos['entry_time'], tz='UTC')
+                pos_label_suffix = f"_{pos_idx}"
+                if not data_1h_to_plot.empty and data_1h_to_plot.index[0] <= entry_ts <= data_1h_to_plot.index[-1]:
+                    closest_date = data_1h_to_plot.index.asof(entry_ts)
+                    if closest_date is not pd.NaT:
+                        ax1.scatter(closest_date, pos['entry_price'], 
+                                    color=('green' if pos['direction'] == 'long' else 'red'),
+                                    marker=('^' if pos['direction'] == 'long' else 'v'), 
+                                    s=120, edgecolors='black', zorder=6, 
+                                    label=f"Вход {pos['direction']}{pos_label_suffix}")
+                        if 'take_profit' in pos: # Используем take_profit если есть
+                             ax1.axhline(y=pos['take_profit'], color=('blue' if pos['direction'] == 'long' else 'fuchsia'), 
+                                         linestyle='-.', alpha=0.7, label=f"Цель{pos_label_suffix}: {pos['take_profit']:.5f}", zorder=3)
+                        elif 'target' in pos: # Фоллбэк на target
+                             ax1.axhline(y=pos['target'], color=('blue' if pos['direction'] == 'long' else 'fuchsia'), 
+                                         linestyle='-.', alpha=0.7, label=f"Цель{pos_label_suffix}: {pos['target']:.5f}", zorder=3)
+                        if 'stop_loss' in pos: 
+                             ax1.axhline(y=pos['stop_loss'], color='dimgray', linestyle=':', alpha=0.7, 
+                                         label=f"Стоп{pos_label_suffix}: {pos['stop_loss']:.5f}", zorder=3)
             
             handles, labels = ax1.get_legend_handles_labels()
-            by_label = dict(zip(labels, handles)) 
-            if by_label: ax1.legend(by_label.values(), by_label.keys(), loc='upper left')
+            by_label = {label: handle for label, handle in zip(labels, handles)}
+            if by_label: ax1.legend(by_label.values(), by_label.keys(), loc='best', fontsize='x-small')
+
         else:
-            ax1.text(0.5, 0.5, "Нет данных для 1H графика", ha='center', va='center', transform=ax1.transAxes)
-            ax1.set_title(f"Стратегия 1H3M для {self.symbol} (1H) - Нет данных", fontsize=14)
+            logger.warning("data_1h_to_plot пуст, None или не содержит всех OHLC колонок. Свечи для 1H графика не будут построены.")
+            ax1.text(0.5, 0.5, "Нет валидных данных для свечей 1H", ha='center', va='center', transform=ax1.transAxes)
 
         # --- 3-минутный график (ax2) ---
-        if not recent_3m_ohlc.empty:
-            mpf.plot(recent_3m_ohlc, type='candle', ax=ax2, style=s, ylabel="Цена (3M)")
-            ax2.set_title("3-минутный график", fontsize=12)
-            for skip in self.skip_conditions:
-                skip_timestamp_original = pd.Timestamp(skip['timestamp'])
-                if skip_timestamp_original.tzinfo is None: skip_time_aware = skip_timestamp_original.tz_localize('UTC')
-                else: skip_time_aware = skip_timestamp_original.tz_convert('UTC')
-                if not recent_3m_ohlc.empty and recent_3m_ohlc.index[0] <= skip_time_aware <= recent_3m_ohlc.index[-1]:
-                    closest_date_3m = recent_3m_ohlc.index.asof(skip_time_aware)
-                    if closest_date_3m is not pd.NaT and closest_date_3m in recent_3m_ohlc.index:
-                        price_at_skip = recent_3m_ohlc.loc[closest_date_3m, 'Close'] 
-                        ax2.scatter(closest_date_3m, price_at_skip, color='orange', marker='x', s=150, zorder=5)
-                        reasons_text = '\n'.join(skip['reasons'][:2]) 
-                        ax2.annotate(reasons_text, xy=(closest_date_3m, price_at_skip), xytext=(10, -30), 
-                                     textcoords='offset points', fontsize=8,
-                                     bbox=dict(boxstyle="round,pad=0.3", fc="white", alpha=0.7, ec="black"), zorder=6)
+        ax2.set_title("3-минутный график", fontsize=12)
+        if data_3m_to_plot is not None and not data_3m_to_plot.empty:
+            # Проверяем наличие OHLC колонок для 3М графика
+            present_ohlc_cols_3m = [col for col in ohlc_columns if col in data_3m_to_plot.columns]
+            if len(present_ohlc_cols_3m) == 4:
+                logger.info(f"--- Информация о data_3m_to_plot ({data_3m_to_plot.shape}) перед построением свечей 3M ---")
+                volume_present_3m = 'Volume' in data_3m_to_plot.columns and not data_3m_to_plot['Volume'].isnull().all()
+                try:
+                    mpf.plot(data_3m_to_plot, type='candle', ax=ax2, style=s, ylabel="Цена (3M)", 
+                             volume=ax2.twinx() if volume_present_3m else False, # Рисуем объем на отдельной оси, если есть
+                             show_nontrading=False) 
+                    if volume_present_3m:
+                        logger.info("Свечи и объем для 3M графика успешно отрисованы.")
+                    else:
+                        logger.info("Свечи для 3M графика успешно отрисованы (без объема).")
+                except Exception as e:
+                    logger.error(f"Ошибка при вызове mpf.plot для 3M графика: {e}", exc_info=True)
+                    ax2.text(0.5, 0.5, "Ошибка отрисовки свечей 3M", ha='center', va='center', color='red', transform=ax2.transAxes)
+
+                for skip_idx, skip in enumerate(self.skip_conditions):
+                    skip_ts = pd.Timestamp(skip['timestamp'], tz='UTC')
+                    skip_label_suffix = f"_{skip_idx}"
+                    if not data_3m_to_plot.empty and data_3m_to_plot.index[0] <= skip_ts <= data_3m_to_plot.index[-1]:
+                        closest_date = data_3m_to_plot.index.asof(skip_ts)
+                        if closest_date is not pd.NaT and closest_date in data_3m_to_plot.index:
+                            price_at_skip = data_3m_to_plot.loc[closest_date, 'Close'] # Используем Close для положения метки
+                            ax2.scatter(closest_date, price_at_skip, color='orange', marker='x', s=70, zorder=5, 
+                                        label=f"Пропуск{skip_label_suffix}" if f"Пропуск{skip_label_suffix}" not in ax2.get_legend_handles_labels()[1] else "")
+                            if 'reasons' in skip and skip['reasons']:
+                                 ax2.annotate('\n'.join(skip['reasons'][:1]), # Показываем только первую причину для краткости
+                                              xy=(closest_date, price_at_skip), xytext=(5, -15),
+                                              textcoords='offset points', fontsize=6, 
+                                              bbox=dict(boxstyle="round,pad=0.1", fc="lightyellow", alpha=0.7, ec="grey"))
+                handles_ax2, labels_ax2 = ax2.get_legend_handles_labels()
+                # Если есть оси объема, их легенды тоже могут попасть сюда. Фильтруем.
+                valid_legend_items_ax2 = {label: handle for label, handle in zip(labels_ax2, handles_ax2) if "Пропуск" in label} # Пример фильтра
+                if valid_legend_items_ax2: ax2.legend(valid_legend_items_ax2.values(), valid_legend_items_ax2.keys(), loc='best', fontsize='x-small')
+
+            else:
+                logger.warning("data_3m_to_plot не содержит всех OHLC колонок. Свечи для 3M графика не будут построены.")
+                ax2.text(0.5, 0.5, "Нет валидных OHLC данных для свечей 3M", ha='center', va='center', transform=ax2.transAxes)
         else:
-            ax2.text(0.5, 0.5, "Нет данных для 3M графика", ha='center', va='center', transform=ax2.transAxes)
-            ax2.set_title("3-минутный график - Нет данных", fontsize=12)
-        
-        fig.tight_layout() 
-        if save_path: plt.savefig(save_path)
-        else: plt.show() 
+            logger.warning("data_3m_to_plot пуст или None. Свечи для 3M графика не будут построены.")
+            ax2.text(0.5, 0.5, "Нет данных для свечей 3M", ha='center', va='center', transform=ax2.transAxes)
+
+        try:
+            fig.tight_layout(pad=1.5)
+        except Exception as e:
+            logger.warning(f"Ошибка при вызове fig.tight_layout(): {e}")
+
+        if save_path:
+            plt.savefig(save_path)
+            logger.info(f"График сохранен в {save_path}")
+        else:
+            plt.show()
+        logger.info("Конец visualize_strategy")
         return fig

@@ -5,8 +5,9 @@ import os
 import time
 import colorama
 from colorama import Fore, Back, Style
-from datetime import datetime
-from main import TradingBot1H3M  # Импортируем ваш основной класс бота
+from datetime import datetime, date, timedelta
+import pandas as pd # Добавьте импорт pandas, если он используется для pd.Timestamp
+from main import TradingBot1H3M
 
 # Инициализация colorama для работы с цветами в терминале
 colorama.init(autoreset=True)
@@ -51,86 +52,68 @@ def print_conditions_wrapper(conditions):
             print(f"{Fore.RED}Ошибка формата условия: {condition}")
 
 def print_signal(signal):
-    """Печать информации о сигнале"""
-    # Убедитесь, что colorama и ее компоненты импортированы в начале файла exec.py
-    # Например:
-    # import colorama
-    # from colorama import Fore, Style
-    # colorama.init(autoreset=True) # Инициализация colorama
+    """Печать информации о сигнале, если он актуален для сегодня."""
+    # Проверяем наличие ключа 'fractal' и 'timestamp' в нем
+    if 'fractal' in signal and isinstance(signal['fractal'].get('timestamp'), (datetime, pd.Timestamp)):
+        signal_date = signal['fractal']['timestamp'].date()
+        # Считаем сигнал актуальным, если его фрактал сформировался сегодня или вчера
+        # (т.к. мы можем использовать вчерашний NY фрактал)
+        if signal_date >= date.today() - timedelta(days=1):
+            # --- Оригинальный код функции print_signal ---
+            expected_keys = ['direction', 'entry_price', 'take_profit', 'stop_loss']
+            missing_keys = [key for key in expected_keys if key not in signal]
 
-    # Проверяем наличие необходимых ключей в словаре signal перед их использованием
-    expected_keys = ['direction', 'entry_price', 'take_profit', 'stop_loss']
-    missing_keys = [key for key in expected_keys if key not in signal]
+            if missing_keys:
+                print(f"\n{Style.BRIGHT}{Fore.RED}Ошибка: Словарь сигнала не содержит ключей: {', '.join(missing_keys)}.{Style.RESET_ALL}")
+                print(f"Полученный сигнал: {signal}")
+                return
 
-    if missing_keys:
-        # Выводим сообщение об ошибке, если каких-то ключей не хватает
-        # Предполагается, что Style, Fore, Style.RESET_ALL из colorama импортированы
-        print(f"\n{Style.BRIGHT}{Fore.RED}Ошибка: Словарь сигнала не содержит следующих ключей: {', '.join(missing_keys)}.{Style.RESET_ALL}")
-        print(f"Полученный сигнал: {signal}")
-        return
+            direction_color = Fore.GREEN if signal['direction'] == 'long' else Fore.RED
+            direction = signal['direction'].upper()
+            entry_price = signal['entry_price']
+            target = signal['take_profit']
+            point_size_local = 0.0001
+            symbol_local = "N/A"
 
-    direction_color = Fore.GREEN if signal['direction'] == 'long' else Fore.RED
-    direction = signal['direction'].upper()
-    entry_price = signal['entry_price']
-    
-    # КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 1: Используем 'take_profit' вместо 'target'
-    target = signal['take_profit'] 
-    
-    point_size_local = 0.0001 # Значение по умолчанию для EURUSD-подобных пар
-    symbol_local = "N/A"      # Значение по умолчанию
+            if 'bot' in globals() and hasattr(bot, 'symbol') and hasattr(bot, 'point_size'):
+                point_size_local = bot.point_size
+                symbol_local = bot.symbol
+            elif 'bot' in globals() and hasattr(bot, 'symbol'):
+                symbol_local = bot.symbol
+                if 'USD' in symbol_local and 'XAU' not in symbol_local:
+                     point_size_local = 0.0001
+                elif 'GER40' == symbol_local:
+                     point_size_local = 1
+                elif 'XAUUSD' == symbol_local:
+                     point_size_local = 0.1
+                else:
+                    print(f"{Fore.YELLOW}Предупреждение: Не удалось определить point_size для {symbol_local}. Используется {point_size_local}.{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.YELLOW}Предупреждение: 'bot' или атрибуты 'symbol'/'point_size' не найдены.{Style.RESET_ALL}")
 
-    # Предполагается, что 'bot' - это глобальная переменная в exec.py,
-    # инициализированная экземпляром TradingBot1H3M.
-    # Эта переменная должна быть доступна в области видимости этой функции.
-    if 'bot' in globals() and hasattr(bot, 'symbol') and hasattr(bot, 'point_size'):
-        point_size_local = bot.point_size
-        symbol_local = bot.symbol
-    elif 'bot' in globals() and hasattr(bot, 'symbol'): 
-        # Если point_size не найден напрямую, пытаемся определить его по символу
-        symbol_local = bot.symbol
-        if 'USD' in symbol_local and 'XAU' not in symbol_local: # Для валютных пар типа EURUSD, GBPUSD
-             point_size_local = 0.0001
-        elif 'GER40' == symbol_local:
-             point_size_local = 1 
-        elif 'XAUUSD' == symbol_local:
-             point_size_local = 0.1
-        # Добавьте другие условия для разных символов, если необходимо
-        else:
-            # Предполагается, что Fore, Style, Style.RESET_ALL из colorama импортированы
-            print(f"{Fore.YELLOW}Предупреждение: Не удалось автоматически определить point_size для символа {symbol_local}. Используется значение по умолчанию {point_size_local}.{Style.RESET_ALL}")
+            if not isinstance(target, (int, float)) or not isinstance(entry_price, (int, float)):
+                print(f"{Fore.RED}Ошибка: target ({target}) или entry_price ({entry_price}) не числа.{Style.RESET_ALL}")
+                return
+
+            target_pips = abs(target - entry_price) / point_size_local
+            stop_loss = signal['stop_loss']
+
+            if not isinstance(stop_loss, (int, float)):
+                print(f"{Fore.RED}Ошибка: stop_loss ({stop_loss}) не число.{Style.RESET_ALL}")
+                return
+
+            risk_pips = abs(entry_price - stop_loss) / point_size_local
+            risk_reward = target_pips / risk_pips if risk_pips > 0 else float('inf')
+
+            print(f"\n{Style.BRIGHT}Сигнал для входа ({symbol_local}):")
+            print(f"  Направление: {direction_color}{direction}{Style.RESET_ALL}")
+            print(f"  Цена входа: {Fore.CYAN}{entry_price:.5f}{Style.RESET_ALL}")
+            print(f"  Целевой уровень (Take Profit): {Fore.CYAN}{target:.5f}{Style.RESET_ALL} ({Fore.MAGENTA}{int(target_pips)} пунктов{Style.RESET_ALL})")
+            print(f"  Стоп-лосс: {Fore.CYAN}{stop_loss:.5f}{Style.RESET_ALL} ({Fore.MAGENTA}{int(risk_pips)} пунктов{Style.RESET_ALL})")
+            print(f"  Соотношение риск/прибыль: {Fore.YELLOW}{risk_reward:.2f}{Style.RESET_ALL}")
+            # --- Конец оригинального кода ---
     else:
-        # Предполагается, что Fore, Style, Style.RESET_ALL из colorama импортированы
-        print(f"{Fore.YELLOW}Предупреждение: Глобальная переменная 'bot' или ее атрибуты 'symbol'/'point_size' не найдены. Расчет пунктов может быть неточным.{Style.RESET_ALL}")
-
-    # Убедимся, что target и entry_price являются числами перед использованием в расчетах
-    if not isinstance(target, (int, float)) or not isinstance(entry_price, (int, float)):
-        # Предполагается, что Fore, Style.RESET_ALL из colorama импортированы
-        print(f"{Fore.RED}Ошибка: target ({target}) или entry_price ({entry_price}) не являются числами.{Style.RESET_ALL}")
-        return
-        
-    target_pips = abs(target - entry_price) / point_size_local
-    
-    # КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ 2: Используем 'stop_loss' из словаря signal
-    stop_loss = signal['stop_loss']
-
-    # Убедимся, что stop_loss является числом
-    if not isinstance(stop_loss, (int, float)):
-        # Предполагается, что Fore, Style.RESET_ALL из colorama импортированы
-        print(f"{Fore.RED}Ошибка: stop_loss ({stop_loss}) не является числом.{Style.RESET_ALL}")
-        return
-        
-    risk_pips = abs(entry_price - stop_loss) / point_size_local
-    
-    # Избегаем деления на ноль для risk_reward
-    risk_reward = target_pips / risk_pips if risk_pips > 0 else float('inf')
-    
-    # Предполагается, что Style, Fore, Style.RESET_ALL, Fore.MAGENTA из colorama импортированы
-    print(f"\n{Style.BRIGHT}Сигнал для входа ({symbol_local}):")
-    print(f"  Направление: {direction_color}{direction}{Style.RESET_ALL}")
-    print(f"  Цена входа: {Fore.CYAN}{entry_price:.5f}{Style.RESET_ALL}")
-    print(f"  Целевой уровень (Take Profit): {Fore.CYAN}{target:.5f}{Style.RESET_ALL} ({Fore.MAGENTA}{int(target_pips)} пунктов{Style.RESET_ALL})")
-    print(f"  Стоп-лосс: {Fore.CYAN}{stop_loss:.5f}{Style.RESET_ALL} ({Fore.MAGENTA}{int(risk_pips)} пунктов{Style.RESET_ALL})")
-    print(f"  Соотношение риск/прибыль: {Fore.YELLOW}{risk_reward:.2f}{Style.RESET_ALL}")
+        print(f"{Fore.RED}Ошибка: Неверный формат timestamp в сигнале: {signal}")
 
 
 def print_open_positions(positions):
@@ -152,27 +135,71 @@ def print_open_positions(positions):
               f"тек. P/L: {profit_color}{int(profit_pips)} пунктов")
 
 def print_fractal_levels(levels):
-    """Печать информации о фрактальных уровнях"""
-    if not levels:
-        print(f"\n{Fore.WHITE}Фрактальные уровни: {Fore.YELLOW}Не найдены")
+    """Печать информации о фрактальных уровнях, относящихся к сегодняшнему дню или вчерашнему NY."""
+    today = date.today() # Получаем сегодняшнюю дату
+    yesterday = today - timedelta(days=1) # Получаем вчерашнюю дату
+
+    relevant_levels = []
+    if levels: # Проверяем, что levels не пустой
+        for level in levels:
+            # Проверяем, что timestamp - это объект datetime или Timestamp
+            if isinstance(level.get('timestamp'), (datetime, pd.Timestamp)):
+                level_date = level['timestamp'].date()
+                level_hour = level['timestamp'].hour
+                # Оставляем фракталы сегодняшней Азии/Франкфурта/Лондона
+                # и вчерашнего Нью-Йорка (13-21 UTC)
+                if level_date == today or \
+                   (level_date == yesterday and 13 <= level_hour < 21):
+                     relevant_levels.append(level)
+            else:
+                print(f"{Fore.RED}Ошибка: Неверный формат timestamp для фрактала: {level}")
+
+    if not relevant_levels:
+        print(f"\n{Fore.WHITE}Фрактальные уровни (за сегодня/вчера NY): {Fore.YELLOW}Не найдены")
         return
-        
-    print(f"\n{Fore.WHITE}{Style.BRIGHT}Фрактальные уровни:")
-    for level in levels:
+
+    print(f"\n{Fore.WHITE}{Style.BRIGHT}Фрактальные уровни (за сегодня/вчера NY):")
+    for level in relevant_levels:
         level_type_color = Fore.GREEN if level['type'] == 'bullish' else Fore.RED
         level_type = "Бычий" if level['type'] == 'bullish' else "Медвежий"
         print(f"  {level_type_color}{level_type} {Fore.WHITE}уровень: {level['price']:.5f} "
               f"({level['timestamp'].strftime('%d.%m %H:%M')})")
 
+
 def print_skip_conditions(conditions):
-    """Печать информации о пропущенных сигналах"""
-    if not conditions:
-        return
-        
-    print(f"\n{Fore.YELLOW}{Style.BRIGHT}Пропущенные сигналы:")
-    for cond in conditions:
+    """Печать информации о пропущенных сигналах только за сегодня."""
+    today_skips = []
+    today = date.today() # Получаем сегодняшнюю дату
+
+    if conditions: # Проверяем, что conditions не пустой
+        for cond in conditions:
+            # Проверяем наличие 'timestamp' и его тип
+            if isinstance(cond.get('timestamp'), (datetime, pd.Timestamp)):
+                if cond['timestamp'].date() == today:
+                    today_skips.append(cond)
+            # Обработка случая, если timestamp не datetime (например, строка, None)
+            elif 'timestamp' in cond:
+                 print(f"{Fore.YELLOW}Предупреждение: Неверный формат timestamp в пропущенном сигнале: {cond['timestamp']}. Пропускается.")
+            # Обработка случая, если ключ 'timestamp' отсутствует
+            elif 'fractal' in cond and isinstance(cond['fractal'].get('timestamp'), (datetime, pd.Timestamp)):
+                 if cond['fractal']['timestamp'].date() == today:
+                     # Если нет timestamp у skip, но есть у фрактала, используем его дату
+                     today_skips.append(cond)
+                     print(f"{Fore.YELLOW}Предупреждение: У пропущенного сигнала отсутствует timestamp, используется дата фрактала.")
+            else:
+                 print(f"{Fore.RED}Ошибка: Отсутствует или неверный timestamp в пропущенном сигнале: {cond}. Пропускается.")
+
+
+    if not today_skips:
+        return # Не выводим заголовок, если нет пропусков за сегодня
+
+    print(f"\n{Fore.YELLOW}{Style.BRIGHT}Пропущенные сигналы (за сегодня):")
+    for cond in today_skips:
         reasons = ", ".join(cond['reasons'])
-        print(f"  {Fore.WHITE}Фрактал {cond['fractal']['price']:.5f}: {Fore.YELLOW}{reasons}")
+        # Добавим проверку наличия фрактала и его цены
+        fractal_price_str = f"{cond['fractal']['price']:.5f}" if 'fractal' in cond and 'price' in cond['fractal'] else "N/A"
+        print(f"  {Fore.WHITE}Фрактал {fractal_price_str}: {Fore.YELLOW}{reasons}")
+
 
 def print_daily_limit(limit, context):
     """Печать информации о дневном лимите"""
