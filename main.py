@@ -44,6 +44,11 @@ class TradingBot1H3M:
         self.symbol = symbol
         self.timeframe_1h = timeframe_1h
         self.timeframe_3m = timeframe_3m
+
+
+        self.pdl = None # Previous Day Low
+        self.pdh = None # Previous Day High
+
         # self.exchange больше не используется для выбора источника данных в fetch_data
         # Если он нужен для других целей (например, реальной торговли), его можно оставить
         # и инициализировать соответствующим образом.
@@ -154,6 +159,74 @@ class TradingBot1H3M:
         # Попытка получить текущую цену здесь может вызвать ошибку, если self.data_3m еще None
         # Лучше перенести это логирование или получение цены после первого вызова fetch_data
 
+    def update_pdl_pdh(self):
+        """
+        Обновление Previous Day Low (PDL) и Previous Day High (PDH).
+        """
+        self.pdl = None
+        self.pdh = None
+
+        if self.data_1h is None or self.data_1h.empty:
+            logger.warning("Данные self.data_1h отсутствуют. Невозможно рассчитать PDL/PDH.")
+            return
+
+        try:
+            # Ensure the index is a DatetimeIndex
+            if not isinstance(self.data_1h.index, pd.DatetimeIndex):
+                logger.error("Индекс self.data_1h не является DatetimeIndex. Невозможно рассчитать PDL/PDH.")
+                return
+
+            # Determine the date of the latest data point
+            latest_data_date = self.data_1h.index[-1].date()
+            
+            # Determine "yesterday" based on the latest available data
+            # This handles cases where you might be running analysis on historical data
+            # not necessarily "yesterday" from `datetime.now()`
+            
+            # Find unique dates in the data index, sorted
+            unique_dates_in_data = sorted(list(set(self.data_1h.index.date)))
+            
+            if not unique_dates_in_data:
+                logger.warning("В self.data_1h нет дат для расчета PDL/PDH.")
+                return
+
+            # Find the index of the latest_data_date
+            try:
+                latest_date_index_in_unique_list = unique_dates_in_data.index(latest_data_date)
+            except ValueError:
+                logger.warning(f"Дата последнего бара {latest_data_date} не найдена в списке уникальных дат. PDL/PDH не обновлены.")
+                return
+
+            if latest_date_index_in_unique_list > 0:
+                previous_trading_day_date = unique_dates_in_data[latest_date_index_in_unique_list - 1]
+            else:
+                # Not enough unique previous days in the loaded data_1h
+                logger.warning(f"Недостаточно предыдущих торговых дней в загруженных данных self.data_1h для {latest_data_date}, чтобы определить PDL/PDH.")
+                return
+
+            logger.info(f"Расчет PDL/PDH для дня предшествующего {latest_data_date}, то есть для {previous_trading_day_date}")
+            
+            previous_day_data_1h = self.data_1h[self.data_1h.index.date == previous_trading_day_date]
+
+            if previous_day_data_1h.empty:
+                logger.warning(f"Нет данных за {previous_trading_day_date} в self.data_1h для расчета PDL/PDH.")
+                return
+
+            # Ensure 'low' and 'high' columns exist
+            if 'low' not in previous_day_data_1h.columns or 'high' not in previous_day_data_1h.columns:
+                logger.error("Колонки 'low' или 'high' отсутствуют в previous_day_data_1h.")
+                return
+                
+            self.pdl = previous_day_data_1h['low'].min()
+            self.pdh = previous_day_data_1h['high'].max()
+            logger.info(f"PDL ({previous_trading_day_date}) установлен: {self.pdl:.5f}")
+            logger.info(f"PDH ({previous_trading_day_date}) установлен: {self.pdh:.5f}")
+
+        except Exception as e:
+            logger.error(f"Ошибка при обновлении PDL/PDH: {e}", exc_info=True)
+            self.pdl = None
+            self.pdh = None
+
     def fetch_data(self):
         """
         Загрузка исторических данных всегда из Twelve Data.
@@ -161,6 +234,9 @@ class TradingBot1H3M:
         logger.info("Загрузка реальных данных из Twelve Data...")
         self.data_1h = self.fetch_historical_data(self.timeframe_1h)
         self.data_3m = self.fetch_historical_data(self.timeframe_3m)
+
+        if self.data_1h is not None and not self.data_1h.empty:
+            self.update_pdl_pdh()
 
         if self.data_1h is not None and self.data_3m is not None:
             logger.info(f"Данные загружены: {len(self.data_1h)} часовых свечей, {len(self.data_3m)} 3-минутных свечей")
