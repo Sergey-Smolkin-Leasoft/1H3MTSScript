@@ -177,16 +177,18 @@ class TradingBot1H3M:
 
     def fetch_historical_data(self, timeframe, limit=500):
         """
-        Загрузка исторических данных с Twelve Data с обработкой лимита API
+        Загрузка исторических данных с Twelve Data с обработкой лимита API и проверкой данных.
+        Предполагается, что метка времени находится в индексе DataFrame.
         """
         td_timeframe_map = {
-            '1h': '1h', 
-            '3m': '3m' 
-        }   
-
+            '1h': '1h',
+            '5min': '5min' # Поддержка для '5min'
+            # Добавьте другие таймфреймы при необходимости
+        }
         td_timeframe = td_timeframe_map.get(timeframe)
         if not td_timeframe:
-            logger.error(f"Неподдерживаемый таймфрейм для Twelve Data: {timeframe}")
+            # Это сообщение от вашего кода, а не от API
+            logger.error(f"Неподдерживаемый таймфрейм в конфигурации бота: {timeframe}. Проверьте td_timeframe_map.")
             return None
 
         symbol_to_fetch = self.symbol_mapping.get(self.symbol)
@@ -194,14 +196,13 @@ class TradingBot1H3M:
             logger.error(f"Символ {self.symbol} не найден в symbol_mapping.")
             return None
 
-        # Добавляем цикл для повторных попыток в случае ошибки лимита
         retries = 5
         for attempt in range(retries):
             try:
                 logger.info(f"Запрос данных (Попытка {attempt + 1}/{retries}) для {symbol_to_fetch}, интервал {td_timeframe}, лимит {limit}")
                 ts = self.td.time_series(
                     symbol=symbol_to_fetch,
-                    interval=td_timeframe,
+                    interval=td_timeframe, # Используем мапленный интервал
                     outputsize=limit,
                     timezone='UTC'
                 )
@@ -211,48 +212,76 @@ class TradingBot1H3M:
                     logger.warning(f"Получены пустые данные от Twelve Data для {symbol_to_fetch}, интервал {td_timeframe}.")
                     return None
 
-                data = data.rename(columns={
-                    'datetime': 'timestamp', # Убедитесь, что API возвращает 'datetime'
-                    'open': 'open',
-                    'high': 'high',
-                    'low': 'low',
-                    'close': 'close',
-                    'volume': 'volume'
-                })
+                # Логируем оригинальные колонки и тип индекса, чтобы понять формат данных от Twelve Data
+                logger.info(f"Original columns from Twelve Data: {data.columns.tolist()}")
+                logger.info(f"Index type from Twelve Data: {type(data.index)}")
 
-                if 'timestamp' not in data.columns:
-                    logger.error("Колонка 'timestamp' отсутствует в данных после переименования.")
+                # Проверяем, является ли индекс уже DatetimeIndex. Если нет, пытаемся его сконвертировать.
+                if not isinstance(data.index, pd.DatetimeIndex):
+                     logger.warning("Индекс DataFrame не является DatetimeIndex. Попытка конвертации.")
+                     try:
+                         data.index = pd.to_datetime(data.index)
+                         logger.info("Индекс успешно сконвертирован в DatetimeIndex.")
+                     except Exception as e:
+                         logger.error(f"Не удалось сконвертировать индекс в DatetimeIndex: {e}")
+                         logger.error("Неожиданный формат данных. Невозможно использовать для анализа временных рядов.")
+                         return None # Возвращаем None, если индекс не может быть сконвертирован
+
+                # TwelveData часто возвращает колонки OHLCV в нижнем регистре, но проверяем на всякий случай.
+                # Переименовываем колонки в нижний регистр, если они есть.
+                rename_map = {}
+                for col in ['Open', 'High', 'Low', 'Close', 'Volume', 'open', 'high', 'low', 'close', 'volume']:
+                    if col in data.columns and col.lower() not in rename_map.values():
+                        rename_map[col] = col.lower()
+
+                if rename_map:
+                     data.rename(columns=rename_map, inplace=True)
+                     logger.info(f"Переименованы колонки: {rename_map}")
+
+                # Проверяем наличие всех необходимых колонок после потенциального переименования
+                required_cols_lower = ['open', 'high', 'low', 'close'] # Volume может быть опциональным
+                if not all(col in data.columns for col in required_cols_lower):
+                    missing = [col for col in required_cols_lower if col not in data.columns]
+                    logger.error(f"Отсутствуют необходимые OHLCV колонки после обработки: {missing}. Доступные колонки: {data.columns.tolist()}")
                     return None
 
-                data['timestamp'] = pd.to_datetime(data['timestamp'])
-                data.set_index('timestamp', inplace=True)
+                # Убеждаемся, что необходимые колонки имеют числовой тип данных
+                cols_to_numeric = required_cols_lower + (['volume'] if 'volume' in data.columns else [])
+                for col in cols_to_numeric:
+                    data[col] = pd.to_numeric(data[col], errors='coerce')
+
+                # Удаляем строки с NaN значениями, которые могли появиться после pd.to_numeric с errors='coerce'
+                data.dropna(subset=required_cols_lower, inplace=True)
+                if data.empty:
+                     logger.warning("DataFrame пуст после удаления строк с NaN.")
+                     return None
+
+                # Сортируем данные по индексу (метке времени) на всякий случай
                 data.sort_index(inplace=True)
 
-                for col in ['open', 'high', 'low', 'close', 'volume']:
-                    if col in data.columns:
-                        data[col] = pd.to_numeric(data[col], errors='coerce')
-                    else:
-                        logger.warning(f"Колонка {col} отсутствует в полученных данных для {symbol_to_fetch}.")
+                logger.info(f"Успешно загружены и обработаны данные для {symbol_to_fetch}, интервал {td_timeframe}. Обработанный DataFrame head:\n{data.head().to_string()}")
 
-                logger.info(f"Успешно загружены и обработаны данные для {symbol_to_fetch}, интервал {td_timeframe}.")
-                # Добавляем небольшую задержку после успешного запроса, чтобы не превышать лимит
-                time.sleep(1) # Задержка в 1 секунду
+                # Добавляем небольшую задержку после успешного запроса
+                time.sleep(1)
                 return data
 
             except twelvedata.exceptions.TwelveDataError as e:
-                logger.warning(f"TwelveData API лимит исчерпан: {e}. Повторная попытка через {2**(attempt+1)} секунд.")
+                # Этот блок обрабатывает ошибки, специфичные для API TwelveData (например, лимит запросов, неверные параметры)
+                logger.warning(f"Ошибка TwelveData API: {e}. Повторная попытка через {2**(attempt+1)} секунд.")
                 if attempt < retries - 1:
-                    time.sleep(2**(attempt+1)) # Экспоненциальная выдержка: 2, 4, 8, 16, 32 секунды
+                    time.sleep(2**(attempt+1))
                 else:
                     logger.error(f"Превышено максимальное количество повторных попыток для TwelveData API.")
                     return None
             except Exception as e:
-                logger.error(f"Ошибка при получении или обработке данных с Twelve Data для {symbol_to_fetch}: {e}")
+                # Этот блок обрабатывает любые другие неожиданные ошибки
+                logger.error(f"Непредвиденная ошибка при получении или обработке данных с Twelve Data для {symbol_to_fetch}: {e}")
                 import traceback
                 logger.error(traceback.format_exc())
-                return None
+                # В случае непредвиденной ошибки, возможно, нет смысла повторять запрос сразу.
+                return None # Возвращаем None при других ошибках
 
-        return None # Возвращаем None, если все попытки исчерпаны
+        return None # Возвращаем None, если все попытки запроса завершились неудачей
 
     def generate_test_data(self, timeframe):
         """
@@ -865,26 +894,49 @@ class TradingBot1H3M:
 
     def check_fractal_breakout(self, fractal):
         """
-        Проверка пробоя фрактала на 3-минутном графике с учетом типа фрактала
+        Проверка пробоя фрактала на 3-минутном графике с учетом типа фрактала.
+        Проверяет, если high/low последней свечи на 3M пробил уровень фрактала.
         """
-        # Получаем текущие цены
-        current_high = self.data_3m['high'].iloc[-1]
-        current_low = self.data_3m['low'].iloc[-1]
-        
-        # Проверяем пробой с учетом типа фрактала
-        if fractal['type'] == 'bullish':
-            return current_high > fractal['price']
+        # Добавлена проверка наличия 3-минутных данных и достаточного количества свечей
+        if self.data_3m is None or self.data_3m.empty or len(self.data_3m) < 1:
+            logger.warning("Данные 3M не загружены, пусты или содержат менее одной свечи. Невозможно проверить пробой фрактала.")
+            return False # Не можем проверить пробой без данных
+    
+        try:
+            # Получаем последнюю свечу на 3-минутном графике
+            last_candle = self.data_3m.iloc[-1]
+            current_high = float(last_candle['high'])
+            current_low = float(last_candle['low'])
+            fractal_price = float(fractal['price']) # Цена фрактала из словаря
+
+            # Проверяем пробой в зависимости от типа фрактала
             if fractal['type'] == 'bullish':
-                # Для лонга проверяем, что последний максимум пробил фрактал
-                return last_high > fractal_price and \
-                       any(float(row['close']) > fractal_price for _, row in recent_3m.iterrows())
-        else:
-            if fractal['type'] == 'bearish':
-                # Для шорта проверяем, что последний минимум пробил фрактал
-                return last_low < fractal_price and \
-                       any(float(row['close']) < fractal_price for _, row in recent_3m.iterrows())
-        
-        return False
+                # Бычий фрактал (дно). Пробой происходит, если цена поднимается ВЫШЕ уровня фрактала.
+                # Проверяем, если high последней свечи пробил (стал выше) цены фрактала.
+                return current_high > fractal_price
+            elif fractal['type'] == 'bearish':
+                # Медвежий фрактал (вершина). Пробой происходит, если цена опускается НИЖЕ уровня фрактала.
+                # Проверяем, если low последней свечи пробил (стал ниже) цены фрактала.
+                return current_low < fractal_price
+            else:
+                # Если тип фрактала неизвестен, считаем, что пробоя нет.
+                logger.warning(f"Неизвестный тип фрактала: {fractal['type']}. Пробой не определен.")
+                return False
+
+        except IndexError:
+            # Если нет последней свечи (например, data_3m содержит 0 свечей, хотя мы проверили len < 1 выше)
+            logger.warning("Недостаточно свечей на 3M графике для получения последней свечи.")
+            return False
+        except KeyError as e:
+            # Если в data_3m отсутствуют колонки 'high' или 'low'
+            logger.error(f"Отсутствует необходимая колонка в data_3m при проверке пробоя фрактала: {e}")
+            return False
+        except Exception as e:
+            # Обработка любых других непредвиденных ошибок при проверке пробоя
+            logger.error(f"Непредвиденная ошибка при проверке пробоя фрактала: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return False
 
     def check_liquidity_swipe(self, session_name):
         """
