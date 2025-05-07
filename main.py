@@ -252,7 +252,6 @@ class TradingBot1H3M:
             logger.error(traceback.format_exc())
             return None # Возвращаем None в случае ошибки, чтобы избежать дальнейших проблем
 
-
     def generate_test_data(self, timeframe):
         """
         Генерация тестовых данных для разработки
@@ -374,7 +373,6 @@ class TradingBot1H3M:
                 'p_value': 1.0
             }
         
-    
     def analyze_market_context(self, recent_data):
         """
         Анализ контекста рынка
@@ -453,7 +451,6 @@ class TradingBot1H3M:
             logger.info(f"Наиболее значимый {most_significant['type']} на уровне {most_significant['price']} (таймфрейм: {most_significant['timeframe']})")
         
         return ssl_bsl_levels
-    
     
     def check_poi_fvg(self, recent_data):
         """
@@ -826,7 +823,6 @@ class TradingBot1H3M:
                 filtered_fractals.append(fractal)
         
         return filtered_fractals
-
 
     def check_fractal_breakout(self, fractal):
         """
@@ -1360,7 +1356,6 @@ class TradingBot1H3M:
             skip_reasons.append("Уже открыта позиция в данном направлении")
             
         return skip_reasons
-
 
     def calculate_target_distance(self, fractal):
         """
