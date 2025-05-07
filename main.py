@@ -30,7 +30,7 @@ class TradingBot1H3M:
     """
     Торговый бот, реализующий стратегию 1H3M
     """
-    def __init__(self, symbol, timeframe_1h='1h', timeframe_3m='3m', exchange=None):
+    def __init__(self, symbol, timeframe_1h='1h', timeframe_3m='3m'): # Убран параметр exchange
         """
         Инициализация бота
         
@@ -38,29 +38,32 @@ class TradingBot1H3M:
         symbol (str): Торговый символ (например, 'EURUSD', 'GER40')
         timeframe_1h (str): Временной интервал для часового графика
         timeframe_3m (str): Временной интервал для 3-минутного графика
-        exchange: Биржевой объект для торговли (если None, используется тестовый режим)
         """
         self.symbol = symbol
         self.timeframe_1h = timeframe_1h
         self.timeframe_3m = timeframe_3m
-        self.exchange = exchange
-        
+        # self.exchange больше не используется для выбора источника данных в fetch_data
+        # Если он нужен для других целей (например, реальной торговли), его можно оставить
+        # и инициализировать соответствующим образом.
+        # Для данного запроса, фокусирующегося на загрузке данных, его можно убрать или оставить None.
+        self.exchange = None # Или инициализировать объектом биржи, если он используется для торговли
+
         # Инициализация базы данных
         self.db = TradingDatabase()
-        
+
         # Настройка Twelve Data API
         load_dotenv()
         self.td_api_key = os.getenv('TWELVE_DATA_API_KEY', '9c614fea46d04e3d8c4f3f76b0541ab6')
         self.td = TDClient(apikey=self.td_api_key)
-        
+
         # Маппинг символов для Twelve Data
         self.symbol_mapping = {
             'EURUSD': 'EUR/USD',
             'GBPUSD': 'GBP/USD',
             'XAUUSD': 'XAU/USD',
-            'GER40': 'DAX'
+            'GER40': 'DAX' # Убедитесь, что тикер DAX корректен для вашего провайдера, часто это GER30 или DE30EUR
         }
-        
+
         # Настройки инструментов
         if symbol == 'EURUSD':
             self.max_target_points = 250
@@ -76,11 +79,11 @@ class TradingBot1H3M:
             self.point_size = 1
         else:
             raise ValueError(f"Неподдерживаемый символ: {symbol}")
-        
+
         # Данные
         self.data_1h = None
         self.data_3m = None
-        
+
         # Информация о сессиях
         self.sessions = {
             'asia': {'start': 1, 'end': 9},          # 01:00-09:00 UTC
@@ -88,14 +91,14 @@ class TradingBot1H3M:
             'newyork': {'start': 13, 'end': 21},     # 13:00-21:00 UTC
             'frankfurt': {'start': 7, 'end': 15}     # 07:00-15:00 UTC
         }
-        
+
         # Текущие сигналы
         self.current_context = None  # 'long' или 'short'
         self.fractal_levels = []
         self.skip_conditions = []
-        
+
         # Состояния цены
-        self.price_context = None  # Текущее состояние цены
+        self.price_context = None
         self.price_context_states = {
             'CLEAR_TREND': 'Четкое направление с Order Flow',
             'INEFFICIENT_DELIVERY': 'Неэффективная доставка без Order Flow',
@@ -103,18 +106,18 @@ class TradingBot1H3M:
             'HORIZONTAL_TREND': 'Горизонтальный тренд',
             'CORRECTION': 'Коррекция'
         }
-        
+
         # Состояние реверсала
         self.reversal_state = {
-            'confirmed_swipes': 0,  # Количество подтвержденных свипов
-            'last_swipe_session': None,  # Последняя сессия свипа
-            'important_target_removed': False,  # Флаг снятия важного таргета
-            'last_liquidity_pool': None  # Последний большой пул ликвидности
+            'confirmed_swipes': 0,
+            'last_swipe_session': None,
+            'important_target_removed': False,
+            'last_liquidity_pool': None
         }
-        
+
         # Дневной лимит (DL)
         self.daily_limit = None
-        
+
         # Параметры для детекции горизонтального тренда
         self.horizontal_trend = {
             'is_horizontal': False,
@@ -124,77 +127,89 @@ class TradingBot1H3M:
             'std_dev': 0.0,
             'last_update': None
         }
-        
+
         # Текущая волатильность
         self.current_volatility = None
-        
+
         # Текущие открытые позиции
         self.open_positions = []
-        
+
         # Таймфреймы для анализа
         self.timeframes = {
-            '24h': 24,  # Последние 24 часа
-            '1w': 168,  # Последняя неделя (7 дней)
-            '1m': 720   # Последний месяц (30 дней)
+            '24h': 24,
+            '1w': 168,
+            '1m': 720
         }
         
-        # SSL/BSL уровни
         self.ssl_bsl_levels = []
-        
-        # Зоны POI/FVG
         self.poi_zones = []
-        
-        # Флаги для реакции
         self.ssl_bsl_removed = False
         self.poi_fvg_reacted = False
-        
-        # Получаем текущую цену EURUSD
-        try:
-            current_price = self.data_3m['close'].iloc[-1]
-            logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
-            logger.info(f"Текущая цена EURUSD: {current_price:.5f}")
-        except Exception as e:
-            logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
-            logger.warning(f"Не удалось получить текущую цену: {e}")
+
+        # Логирование инициализации
+        # Получение текущей цены может быть выполнено после fetch_data()
+        logger.info(f"Бот инициализирован для {symbol} с максимальной целью {self.max_target_points} пунктов")
+        # Попытка получить текущую цену здесь может вызвать ошибку, если self.data_3m еще None
+        # Лучше перенести это логирование или получение цены после первого вызова fetch_data
 
     def fetch_data(self):
         """
-        Загрузка исторических данных
+        Загрузка исторических данных всегда из Twelve Data.
         """
-        if self.exchange:
-            # Реальные данные с биржи
-            self.data_1h = self.fetch_historical_data(self.timeframe_1h)
-            self.data_3m = self.fetch_historical_data(self.timeframe_3m)
+        logger.info("Загрузка реальных данных из Twelve Data...")
+        self.data_1h = self.fetch_historical_data(self.timeframe_1h)
+        self.data_3m = self.fetch_historical_data(self.timeframe_3m)
+
+        if self.data_1h is not None and self.data_3m is not None:
+            logger.info(f"Данные загружены: {len(self.data_1h)} часовых свечей, {len(self.data_3m)} 3-минутных свечей")
+            # Теперь можно безопасно получить текущую цену, если данные загружены
+            try:
+                current_price = self.data_3m['close'].iloc[-1] # Убедитесь, что 'close' - правильное имя колонки
+                logger.info(f"Текущая цена {self.symbol}: {current_price:.5f}")
+            except IndexError:
+                logger.warning(f"Не удалось получить текущую цену для {self.symbol}: DataFrame пуст.")
+            except KeyError:
+                 logger.warning(f"Не удалось получить текущую цену для {self.symbol}: колонка 'close' отсутствует.")
+
         else:
-            # Тестовые данные для разработки
-            self.data_1h = self.generate_test_data(self.timeframe_1h)
-            self.data_3m = self.generate_test_data(self.timeframe_3m)
-        
-        logger.info(f"Данные загружены: {len(self.data_1h)} часовых свечей, {len(self.data_3m)} 3-минутных свечей")
+            logger.error("Не удалось загрузить данные для одного или обоих таймфреймов.")
 
     def fetch_historical_data(self, timeframe, limit=500):
         """
         Загрузка исторических данных с Twelve Data
         """
-        # Преобразуем временной интервал для Twelve Data
-        td_timeframe = {
+        td_timeframe_map = {
             '1h': '1H',
             '3m': '3M'
-        }[timeframe]
+            # Добавьте другие таймфреймы при необходимости
+        }
+        td_timeframe = td_timeframe_map.get(timeframe)
+        if not td_timeframe:
+            logger.error(f"Неподдерживаемый таймфрейм для Twelve Data: {timeframe}")
+            return None
+
+        symbol_to_fetch = self.symbol_mapping.get(self.symbol)
+        if not symbol_to_fetch:
+            logger.error(f"Символ {self.symbol} не найден в symbol_mapping.")
+            return None
         
-        # Получаем данные
         try:
+            logger.info(f"Запрос данных для {symbol_to_fetch}, интервал {td_timeframe}, лимит {limit}")
             ts = self.td.time_series(
-                symbol=self.symbol_mapping[self.symbol],
+                symbol=symbol_to_fetch,
                 interval=td_timeframe,
                 outputsize=limit,
                 timezone='UTC'
             )
             data = ts.as_pandas()
             
-            # Переименуем столбцы для совместимости
+            if data is None or data.empty:
+                logger.warning(f"Получены пустые данные от Twelve Data для {symbol_to_fetch}, интервал {td_timeframe}.")
+                return None
+
             data = data.rename(columns={
-                'datetime': 'timestamp',
+                'datetime': 'timestamp', # Убедитесь, что API возвращает 'datetime'
+                # Остальные переименования остаются как есть
                 'open': 'open',
                 'high': 'high',
                 'low': 'low',
@@ -202,14 +217,41 @@ class TradingBot1H3M:
                 'volume': 'volume'
             })
             
+            # Проверка наличия колонки 'timestamp' после переименования
+            if 'timestamp' not in data.columns:
+                logger.error("Колонка 'timestamp' отсутствует в данных после переименования.")
+                # Попытка найти оригинальное имя колонки даты/времени, если 'datetime' не сработало
+                # Это может потребовать более глубокого анализа ответа API или документации Twelve Data
+                # Например, если API возвращает 'date' или другое имя.
+                # Для примера, если бы это было 'date':
+                # if 'date' in data.columns:
+                #    data.rename(columns={'date': 'timestamp'}, inplace=True)
+                # else:
+                #    return None # Если не можем найти колонку времени
+                return None
+
+
             data['timestamp'] = pd.to_datetime(data['timestamp'])
             data.set_index('timestamp', inplace=True)
+            data.sort_index(inplace=True) # Убедимся, что данные отсортированы по времени
             
+            # Преобразование колонок OHLCV в числовой тип, если они еще не такие
+            for col in ['open', 'high', 'low', 'close', 'volume']:
+                if col in data.columns:
+                    data[col] = pd.to_numeric(data[col], errors='coerce')
+                else:
+                    logger.warning(f"Колонка {col} отсутствует в полученных данных для {symbol_to_fetch}.")
+
+
+            logger.info(f"Успешно загружены и обработаны данные для {symbol_to_fetch}, интервал {td_timeframe}.")
             return data
             
         except Exception as e:
-            logger.error(f"Ошибка при получении данных с Twelve Data: {e}")
-            raise
+            logger.error(f"Ошибка при получении или обработке данных с Twelve Data для {symbol_to_fetch}: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return None # Возвращаем None в случае ошибки, чтобы избежать дальнейших проблем
+
 
     def generate_test_data(self, timeframe):
         """
