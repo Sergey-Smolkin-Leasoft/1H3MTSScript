@@ -2429,3 +2429,37 @@ Traceback (most recent call last):
     session_start_hour_utc = time(start_hour_utc_val, 0, 0, tzinfo=timezone.utc)
                              ^^^^
 NameError: name 'time' is not defined. Did you forget to import 'time'?
+2025-05-08 21:02:05 - 1H3M_TradingBot - WARNING - run.run_bot:199 - Неверный ввод пользователя: 
+2025-05-08 21:02:06 - 1H3M_TradingBot - INFO - bot.fetch_data:98 - Запрос на получение данных для EURUSD...
+2025-05-08 21:02:06 - 1H3M_TradingBot - INFO - run.run_bot:204 - Получен сигнал KeyboardInterrupt. Завершение работы...
+2025-05-08 21:02:06 - 1H3M_TradingBot - INFO - run.run_bot:217 - Приложение бота завершило работу.
+2025-05-08 21:02:09 - 1H3M_TradingBot - INFO - run.run_bot:55 - Запуск основного приложения бота...
+2025-05-08 21:02:09 - 1H3M_TradingBot - INFO - bot.__init__:30 - Инициализация экземпляра бота для символа: EURUSD...
+2025-05-08 21:02:09 - 1H3M_TradingBot - INFO - bot.__init__:82 - Бот для EURUSD инициализирован. Max Target: 250 пт, Point Size: 0.0001
+2025-05-08 21:02:09 - 1H3M_TradingBot - INFO - run.run_bot:61 - Бот успешно инициализирован для символа EURUSD.
+2025-05-08 21:02:09 - 1H3M_TradingBot - INFO - bot.fetch_data:98 - Запрос на получение данных для EURUSD...
+2025-05-08 21:02:11 - 1H3M_TradingBot - INFO - bot.fetch_data:108 - Данные 1H загружены (500 свечей). PDL=1.12913, PDH=1.13785
+2025-05-08 21:02:11 - 1H3M_TradingBot - INFO - bot.fetch_data:115 - Данные 5min загружены (500 свечей). Текущая цена: 1.12268
+2025-05-08 21:02:11 - 1H3M_TradingBot - INFO - bot.analyze_market_context:142 - Результат анализа: Основной Контекст=short
+2025-05-08 21:02:11 - 1H3M_TradingBot - ERROR - bot.find_entry_signals:202 - Ошибка при поиске сигналов входа: can't compare offset-naive and offset-aware times
+Traceback (most recent call last):
+  File "D:\mytsscript\core\bot.py", line 188, in find_entry_signals
+    signals, skips, fractals = self.signal_generator.find_signals(
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        data_1h=self.data_1h,
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        current_symbol=self.symbol
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\mytsscript\analysis\signal_generator.py", line 246, in find_signals
+    sess_fractals = self._filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, session_name, current_utc_time)
+  File "D:\mytsscript\analysis\signal_generator.py", line 100, in _filter_fractals_by_session
+    session_start_hour_utc <= fractal_ts.time() < session_end_hour_utc: # Сравниваем время
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: can't compare offset-naive and offset-aware times
+2025-05-08 21:04:42 - 1H3M_TradingBot - WARNING - run.run_bot:199 - Неверный ввод пользователя: 
+2025-05-08 21:04:43 - 1H3M_TradingBot - INFO - bot.fetch_data:98 - Запрос на получение данных для EURUSD...
+2025-05-08 21:04:44 - 1H3M_TradingBot - INFO - run.run_bot:204 - Получен сигнал KeyboardInterrupt. Завершение работы...
+2025-05-08 21:04:44 - 1H3M_TradingBot - INFO - run.run_bot:217 - Приложение бота завершило работу.

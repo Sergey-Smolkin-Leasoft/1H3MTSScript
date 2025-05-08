@@ -3,7 +3,7 @@
 import pandas as pd
 import numpy as np
 import logging
-from datetime import datetime, timedelta, timezone # Добавлен timezone
+from datetime import datetime, timedelta, timezone, time # <--- ИСПРАВЛЕННАЯ СТРОКА (добавлен time)
 
 from .indicators import calculate_atr
 from config import settings
@@ -56,49 +56,97 @@ class SignalGenerator:
 
 
     def _filter_fractals_by_session(self, fractals: list, session_name: str, reference_date: datetime = None) -> list:
-        # ... (код без изменений) ...
         filtered = []
         if session_name not in self.sessions:
             self.logger.warning(f"Сессия {session_name} не найдена в настройках.")
             return filtered
-        
+
         session_info = self.sessions[session_name]
-        # Убедимся, что start и end являются целыми числами
         start_hour_utc_val = session_info.get('start')
         end_hour_utc_val = session_info.get('end')
 
         if not isinstance(start_hour_utc_val, int) or not isinstance(end_hour_utc_val, int):
             self.logger.error(f"Некорректные значения start/end для сессии {session_name}")
             return filtered
-            
-        session_start_hour_utc = time(start_hour_utc_val, 0, 0, tzinfo=timezone.utc)
-        session_end_hour_utc = time(end_hour_utc_val, 0, 0, tzinfo=timezone.utc)
-
 
         if reference_date is None:
             reference_date = datetime.now(timezone.utc)
+        # Убедимся, что reference_date имеет таймзону UTC
+        if reference_date.tzinfo is None or reference_date.tzinfo.utcoffset(reference_date) != timedelta(0):
+            reference_date = reference_date.astimezone(timezone.utc)
+        
+        # Определяем дату, для которой ищем сессию
+        target_date = reference_date.date()
+        
+        # Создаем offset-aware datetime объекты для начала и конца сессии в нужную дату
+        try:
+            session_start_dt = datetime.combine(target_date, time(start_hour_utc_val, 0), tzinfo=timezone.utc)
+            # Конец сессии не включается, поэтому берем начало следующего часа или дня
+            # Правильнее будет сравнивать время фрактала со временем начала и конца
+            session_end_dt = datetime.combine(target_date, time(end_hour_utc_val, 0), tzinfo=timezone.utc)
+            # Обработка сессий, пересекающих полночь (если end_hour < start_hour)
+            if session_end_dt <= session_start_dt:
+                session_end_dt += timedelta(days=1) # Конец сессии на следующий день
+                # В этом случае фракталы могут быть либо >= start в target_date, либо < end в target_date + 1 день
+                # Это усложняет фильтрацию, пока предполагаем, что сессия в пределах одного UTC дня (start < end)
+                if start_hour_utc_val > end_hour_utc_val:
+                     self.logger.debug(f"Сессия {session_name} пересекает полночь UTC.")
 
+        except ValueError as ve:
+            self.logger.error(f"Ошибка создания datetime для сессии {session_name}: {ve}")
+            return filtered
 
         for fractal in fractals:
             fractal_ts_orig = fractal['timestamp']
-            if isinstance(fractal_ts_orig, pd.Timestamp):
-                 fractal_ts = fractal_ts_orig
-            else: # Попытка конвертации, если это не Timestamp
-                try:
+            fractal_ts = None
+            try:
+                # Конвертируем время фрактала в offset-aware UTC Timestamp
+                if isinstance(fractal_ts_orig, pd.Timestamp):
+                    fractal_ts = fractal_ts_orig
+                else:
                     fractal_ts = pd.to_datetime(fractal_ts_orig)
-                except Exception as e:
-                    self.logger.warning(f"Не удалось конвертировать время фрактала {fractal_ts_orig} в pd.Timestamp: {e}")
-                    continue
 
+                if fractal_ts.tzinfo is None:
+                    fractal_ts = fractal_ts.tz_localize('UTC')
+                else:
+                    fractal_ts = fractal_ts.tz_convert('UTC')
 
-            if fractal_ts.tzinfo is None: 
-                fractal_ts = fractal_ts.tz_localize('UTC')
-            else: 
-                fractal_ts = fractal_ts.tz_convert('UTC')
+                # --- ИЗМЕНЕННОЕ УСЛОВИЕ СРАВНЕНИЯ ---
+                # Сравниваем полные offset-aware datetime/timestamp объекты
+                
+                in_session = False
+                if session_start_dt < session_end_dt: # Стандартный случай (сессия в пределах одного дня)
+                    if session_start_dt <= fractal_ts < session_end_dt:
+                        in_session = True
+                else: # Случай пересечения полуночи (start_hour > end_hour)
+                    # Фрактал должен быть либо после начала сегодня, либо до конца завтра (относительно начала сессии)
+                     if fractal_ts >= session_start_dt or fractal_ts < session_end_dt: 
+                        # Дополнительно убедимся, что дата фрактала = target_date (для части ДО полуночи)
+                        # или target_date+1 (для части ПОСЛЕ полуночи) - это усложняет.
+                        # Проще проверить, попадает ли время в диапазон, а дату проверить отдельно.
+                        # Но сравнение datetime объектов уже учитывает дату.
+                        # Если fractal_ts.date() == target_date и fractal_ts >= session_start_dt -> подходит
+                        # Если fractal_ts.date() == target_date + 1 и fractal_ts < session_end_dt -> подходит
+                        # Условие `fractal_ts >= session_start_dt or fractal_ts < session_end_dt` должно работать.
+                        in_session = True # Упрощенная проверка для пересекающей полуночь сессии
+                        
+                # Дополнительная проверка даты (на всякий случай, если логика пересечения не идеальна)
+                # Хотим фракталы только с reference_date (или reference_date + 1 для утренней части кросс-сессии)
+                is_correct_date = False
+                if session_start_dt.time() < session_end_dt.time(): # Не пересекает
+                    if fractal_ts.date() == target_date: is_correct_date = True
+                else: # Пересекает
+                     if fractal_ts.date() == target_date or fractal_ts.date() == target_date + timedelta(days=1): is_correct_date = True
 
-            if fractal_ts.date() == reference_date.date() and \
-               session_start_hour_utc <= fractal_ts.time() < session_end_hour_utc: # Сравниваем время
-                filtered.append(fractal)
+                if in_session and is_correct_date:
+                    filtered.append(fractal)
+                # --- КОНЕЦ ИЗМЕНЕННОГО УСЛОВИЯ ---
+
+            except Exception as e:
+                self.logger.warning(f"Не удалось обработать время фрактала {fractal_ts_orig} при фильтрации по сессии: {e}")
+                continue
+        
+        self.logger.debug(f"Отфильтровано {len(filtered)} фракталов для сессии '{session_name}' на дату {target_date}.")
         return filtered
 
     def _calculate_target(self, data_1h: pd.DataFrame, current_price: float, context: str,
