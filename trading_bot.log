@@ -2110,3 +2110,322 @@ datetime
 2025-05-08 14:15:34,526 - 1H3M_TradingBot - INFO - Long Target: Найдена цель по историческим максимумам: 1.13817
 2025-05-08 14:15:34,526 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 16:00:00: потенциальный убыток равен нулю или отрицателен (potential_loss=-0.00387000000000004).
 2025-05-08 14:15:34,526 - 1H3M_TradingBot - INFO - Long Target: Найдена цель по историческим максимумам: 1.13817
+2025-05-08 19:38:59,631 - 1H3M_TradingBot - INFO - Бот инициализирован для EURUSD с максимальной целью 250 пунктов
+2025-05-08 19:38:59,641 - 1H3M_TradingBot - INFO - Загрузка реальных данных из Twelve Data...
+2025-05-08 19:38:59,641 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 1h, лимит 500
+2025-05-08 19:38:59,717 - 1H3M_TradingBot - INFO - Original columns from Twelve Data: ['open', 'high', 'low', 'close']
+2025-05-08 19:38:59,717 - 1H3M_TradingBot - INFO - Index type from Twelve Data: <class 'pandas.core.indexes.datetimes.DatetimeIndex'>
+2025-05-08 19:38:59,717 - 1H3M_TradingBot - INFO - Переименованы колонки: {'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close'}
+2025-05-08 19:38:59,722 - 1H3M_TradingBot - INFO - Успешно загружены и обработаны данные для EUR/USD, интервал 1h. Обработанный DataFrame head:
+                        open     high      low    close
+datetime                                               
+2025-04-09 00:00:00  1.09806  1.10181  1.09757  1.10181
+2025-04-09 01:00:00  1.10181  1.10424  1.10181  1.10254
+2025-04-09 02:00:00  1.10229  1.10302  1.10144  1.10229
+2025-04-09 03:00:00  1.10217  1.10363  1.10169  1.10217
+2025-04-09 04:00:00  1.10241  1.10717  1.10229  1.10717
+2025-05-08 19:39:00,723 - 1H3M_TradingBot - INFO - Запрос данных (Попытка 1/5) для EUR/USD, интервал 5min, лимит 500
+2025-05-08 19:39:00,791 - 1H3M_TradingBot - INFO - Original columns from Twelve Data: ['open', 'high', 'low', 'close']
+2025-05-08 19:39:00,791 - 1H3M_TradingBot - INFO - Index type from Twelve Data: <class 'pandas.core.indexes.datetimes.DatetimeIndex'>
+2025-05-08 19:39:00,792 - 1H3M_TradingBot - INFO - Переименованы колонки: {'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close'}
+2025-05-08 19:39:00,793 - 1H3M_TradingBot - INFO - Успешно загружены и обработаны данные для EUR/USD, интервал 5min. Обработанный DataFrame head:
+                        open     high      low    close
+datetime                                               
+2025-05-06 23:00:00  1.13430  1.13435  1.13366  1.13384
+2025-05-06 23:05:00  1.13373  1.13396  1.13348  1.13364
+2025-05-06 23:10:00  1.13365  1.13456  1.13361  1.13405
+2025-05-06 23:15:00  1.13405  1.13441  1.13368  1.13380
+2025-05-06 23:20:00  1.13369  1.13381  1.13329  1.13365
+2025-05-08 19:39:01,794 - 1H3M_TradingBot - INFO - Расчет PDL/PDH для дня предшествующего 2025-05-08, то есть для 2025-05-07
+2025-05-08 19:39:01,795 - 1H3M_TradingBot - INFO - PDL (2025-05-07) установлен: 1.12913
+2025-05-08 19:39:01,795 - 1H3M_TradingBot - INFO - PDH (2025-05-07) установлен: 1.13785
+2025-05-08 19:39:01,795 - 1H3M_TradingBot - INFO - Данные загружены: 500 часовых свечей, 500 3-минутных свечей
+2025-05-08 19:39:01,795 - 1H3M_TradingBot - INFO - Текущая цена EURUSD: 1.12276
+2025-05-08 19:39:01,799 - 1H3M_TradingBot - INFO - Обнаружен горизонтальный тренд (уверенность: 1.00, R²: 0.82)
+2025-05-08 19:39:01,799 - 1H3M_TradingBot - WARNING - Недостаточно данных на 1H графике для анализа SSL/BSL на таймфрейме 1m.
+2025-05-08 19:39:01,801 - 1H3M_TradingBot - INFO - Реакция от зоны POI/FVG: 1.13521-1.13249
+2025-05-08 19:39:01,802 - 1H3M_TradingBot - INFO - Реакция от зоны POI/FVG: 1.13519-1.13263
+2025-05-08 19:39:01,803 - 1H3M_TradingBot - INFO - Реакция от зоны POI/FVG: 1.13521-1.13249
+2025-05-08 19:39:01,804 - 1H3M_TradingBot - INFO - Реакция от зоны POI/FVG: 1.13519-1.13263
+2025-05-08 19:39:01,804 - 1H3M_TradingBot - INFO - Контекст изменен на лонг из-за снятия SSL/BSL или реакции POI/FVG
+2025-05-08 19:39:01,805 - 1H3M_TradingBot - INFO - Определен контекст рынка: short
+2025-05-08 19:39:01,805 - 1H3M_TradingBot - INFO - Обновлен дневной лимит (DL): 1.13368
+2025-05-08 19:39:01,810 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,810 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-09 12:00:00: потенциальный убыток равен нулю или отрицателен (potential_loss=-0.013130000000000086).
+2025-05-08 19:39:01,811 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,811 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-11 08:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,812 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,812 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-11 13:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,813 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,813 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-15 08:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,814 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,814 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-16 07:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,815 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,815 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-17 08:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,816 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,816 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-17 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,817 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,817 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-18 07:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,818 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,818 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-18 14:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,819 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,819 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-21 09:00:00: RR < 1.3 (0.02)
+2025-05-08 19:39:01,820 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,821 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-21 12:00:00: RR < 1.3 (0.02)
+2025-05-08 19:39:01,821 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,822 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-22 14:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,822 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,822 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-23 09:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,824 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,824 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-23 12:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,825 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,825 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-24 10:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,826 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,826 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-24 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,827 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,827 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-25 07:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,828 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,828 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-25 11:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,829 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,829 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-29 07:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,830 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,830 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-30 12:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,831 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,831 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-01 11:00:00: RR < 1.3 (0.06)
+2025-05-08 19:39:01,832 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,833 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-02 09:00:00: RR < 1.3 (0.06)
+2025-05-08 19:39:01,834 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,834 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-02 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,836 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,836 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-05 13:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,838 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,838 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 08:00:00: RR < 1.3 (0.06)
+2025-05-08 19:39:01,839 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,839 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,840 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,840 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-07 11:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,841 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,841 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-07 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,842 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,842 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-08 12:00:00: RR < 1.3 (0.08)
+2025-05-08 19:39:01,843 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,844 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-09 12:00:00: потенциальный убыток равен нулю или отрицателен (potential_loss=-0.013130000000000086).
+2025-05-08 19:39:01,844 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,844 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-10 15:00:00: потенциальный убыток равен нулю или отрицателен (potential_loss=-4.999999999988347e-05).
+2025-05-08 19:39:01,845 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,845 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-11 08:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,846 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,846 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-11 13:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,847 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,847 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-14 15:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,848 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,848 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-15 08:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,849 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,849 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-17 08:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,850 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,850 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-17 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,851 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,851 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-18 14:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,852 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,852 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-21 09:00:00: RR < 1.3 (0.02)
+2025-05-08 19:39:01,854 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,854 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-21 12:00:00: RR < 1.3 (0.02)
+2025-05-08 19:39:01,855 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,856 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-22 14:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,857 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,857 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-23 09:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,858 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,858 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-23 12:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,860 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,860 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-24 10:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,861 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,861 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-24 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,862 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,862 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-25 11:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,864 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,864 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-30 12:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,865 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,865 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-01 11:00:00: RR < 1.3 (0.06)
+2025-05-08 19:39:01,866 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,866 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-02 09:00:00: RR < 1.3 (0.06)
+2025-05-08 19:39:01,867 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,868 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-02 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,868 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,869 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-05 13:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,869 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,870 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 08:00:00: RR < 1.3 (0.06)
+2025-05-08 19:39:01,870 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,870 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,871 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,871 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-07 11:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,872 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,872 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-07 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,873 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,873 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-08 12:00:00: RR < 1.3 (0.08)
+2025-05-08 19:39:01,874 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,874 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-10 15:00:00: потенциальный убыток равен нулю или отрицателен (potential_loss=-4.999999999988347e-05).
+2025-05-08 19:39:01,874 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,874 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-10 18:00:00: RR < 1.3 (0.47)
+2025-05-08 19:39:01,875 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,875 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-11 13:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,876 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,876 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-11 20:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,876 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,876 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-14 15:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,877 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,877 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-14 19:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,877 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,877 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-16 19:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,878 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,878 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-17 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,878 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,879 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-17 20:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,879 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,880 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-18 14:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,880 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,880 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-18 19:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,881 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,881 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-21 19:00:00: RR < 1.3 (0.02)
+2025-05-08 19:39:01,882 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,882 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-22 14:00:00: RR < 1.3 (0.03)
+2025-05-08 19:39:01,883 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,883 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-24 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,883 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,883 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-24 20:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,884 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,884 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-25 16:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,884 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,884 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-04-29 16:00:00: RR < 1.3 (0.04)
+2025-05-08 19:39:01,885 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,885 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-02 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,886 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,886 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-05 13:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,887 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,887 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,887 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,887 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-06 19:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,888 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,888 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-07 14:00:00: RR < 1.3 (0.05)
+2025-05-08 19:39:01,889 - 1H3M_TradingBot - INFO - Short Target: Найдена цель по историческим минимумам: 1.12202
+2025-05-08 19:39:01,889 - 1H3M_TradingBot - INFO - Пропуск сигнала для фрактала 2025-05-07 18:00:00: RR < 1.3 (0.05)
+2025-05-08 20:45:32 - 1H3M_TradingBot - INFO - run.run_bot:55 - Запуск основного приложения бота...
+2025-05-08 20:45:32 - 1H3M_TradingBot - INFO - bot.__init__:30 - Инициализация экземпляра бота для символа: EURUSD...
+2025-05-08 20:45:33 - 1H3M_TradingBot - CRITICAL - run.run_bot:63 - Критическая ошибка при инициализации бота: MarketAnalyzer.__init__() got an unexpected keyword argument 'sma_window'
+Traceback (most recent call last):
+  File "D:\mytsscript\run.py", line 60, in run_bot
+    bot = TradingBot1H3M(symbol=initial_symbol)
+  File "D:\mytsscript\core\bot.py", line 44, in __init__
+    self.analyzer = MarketAnalyzer(
+                    ~~~~~~~~~~~~~~^
+        sma_window=settings.SMA_WINDOW,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        sessions=settings.SESSIONS
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: MarketAnalyzer.__init__() got an unexpected keyword argument 'sma_window'
+2025-05-08 20:50:54 - 1H3M_TradingBot - INFO - run.run_bot:55 - Запуск основного приложения бота...
+2025-05-08 20:50:54 - 1H3M_TradingBot - INFO - bot.__init__:30 - Инициализация экземпляра бота для символа: EURUSD...
+2025-05-08 20:50:54 - 1H3M_TradingBot - INFO - bot.__init__:85 - Бот для EURUSD инициализирован. Max Target: 250 пт, Point Size: 0.0001
+2025-05-08 20:50:54 - 1H3M_TradingBot - INFO - run.run_bot:61 - Бот успешно инициализирован для символа EURUSD.
+2025-05-08 20:50:54 - 1H3M_TradingBot - INFO - bot.fetch_data:104 - Запрос на получение данных для EURUSD...
+2025-05-08 20:50:56 - 1H3M_TradingBot - INFO - bot.fetch_data:115 - Данные 1H загружены (500 свечей). PDL=1.12913, PDH=1.13785
+2025-05-08 20:50:56 - 1H3M_TradingBot - INFO - bot.fetch_data:122 - Данные 5min загружены (500 свечей). Текущая цена: 1.12189
+2025-05-08 20:50:56 - 1H3M_TradingBot - ERROR - bot.analyze_market_context:154 - Ошибка при анализе рыночного контекста: name 'LinearRegression' is not defined
+Traceback (most recent call last):
+  File "D:\mytsscript\core\bot.py", line 141, in analyze_market_context
+    analysis_output = self.analyzer.analyze(
+        self.data_1h,
+    ...<2 lines>...
+        self.pdh
+    )
+  File "D:\mytsscript\analysis\market_analyzer.py", line 301, in analyze
+    primary_context = self._determine_primary_context(data_1h)
+  File "D:\mytsscript\analysis\market_analyzer.py", line 103, in _determine_primary_context
+    model_high = LinearRegression().fit(x, highs.values.reshape(-1, 1))
+                 ^^^^^^^^^^^^^^^^
+NameError: name 'LinearRegression' is not defined
+2025-05-08 20:50:56 - 1H3M_TradingBot - WARNING - bot.find_entry_signals:176 - Пропуск поиска сигналов: данные не загружены или контекст 'neutral'.
+2025-05-08 20:50:56 - 1H3M_TradingBot - ERROR - run.run_bot:208 - Необработанная ошибка в главном цикле: 'TradingBot1H3M' object has no attribute 'daily_limit'
+Traceback (most recent call last):
+  File "D:\mytsscript\run.py", line 94, in run_bot
+    print_daily_limit(bot.daily_limit, bot.current_context)
+                      ^^^^^^^^^^^^^^^
+AttributeError: 'TradingBot1H3M' object has no attribute 'daily_limit'
+2025-05-08 20:53:43 - 1H3M_TradingBot - INFO - run.run_bot:55 - Запуск основного приложения бота...
+2025-05-08 20:53:43 - 1H3M_TradingBot - INFO - bot.__init__:30 - Инициализация экземпляра бота для символа: EURUSD...
+2025-05-08 20:53:43 - 1H3M_TradingBot - INFO - bot.__init__:82 - Бот для EURUSD инициализирован. Max Target: 250 пт, Point Size: 0.0001
+2025-05-08 20:53:43 - 1H3M_TradingBot - INFO - run.run_bot:61 - Бот успешно инициализирован для символа EURUSD.
+2025-05-08 20:53:43 - 1H3M_TradingBot - INFO - bot.fetch_data:98 - Запрос на получение данных для EURUSD...
+2025-05-08 20:53:45 - 1H3M_TradingBot - INFO - bot.fetch_data:108 - Данные 1H загружены (500 свечей). PDL=1.12913, PDH=1.13785
+2025-05-08 20:53:45 - 1H3M_TradingBot - INFO - bot.fetch_data:115 - Данные 5min загружены (500 свечей). Текущая цена: 1.12167
+2025-05-08 20:53:45 - 1H3M_TradingBot - INFO - bot.analyze_market_context:142 - Результат анализа: Основной Контекст=short
+2025-05-08 20:53:45 - 1H3M_TradingBot - ERROR - bot.find_entry_signals:202 - Ошибка при поиске сигналов входа: SignalGenerator.find_signals() got an unexpected keyword argument 'analysis_results'
+Traceback (most recent call last):
+  File "D:\mytsscript\core\bot.py", line 188, in find_entry_signals
+    signals, skips, fractals = self.signal_generator.find_signals(
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        data_1h=self.data_1h,
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        current_symbol=self.symbol
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: SignalGenerator.find_signals() got an unexpected keyword argument 'analysis_results'
+2025-05-08 20:53:45 - 1H3M_TradingBot - ERROR - run.run_bot:208 - Необработанная ошибка в главном цикле: print_daily_limit() missing 1 required positional argument: 'point_size'
+Traceback (most recent call last):
+  File "D:\mytsscript\run.py", line 94, in run_bot
+    print_daily_limit(bot.daily_limit, bot.current_context)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: print_daily_limit() missing 1 required positional argument: 'point_size'
+2025-05-08 20:55:44 - 1H3M_TradingBot - INFO - bot.fetch_data:98 - Запрос на получение данных для EURUSD...
+2025-05-08 20:55:47 - 1H3M_TradingBot - INFO - bot.fetch_data:108 - Данные 1H загружены (500 свечей). PDL=1.12913, PDH=1.13785
+2025-05-08 20:55:47 - 1H3M_TradingBot - INFO - bot.fetch_data:115 - Данные 5min загружены (500 свечей). Текущая цена: 1.12227
+2025-05-08 20:55:47 - 1H3M_TradingBot - INFO - bot.analyze_market_context:142 - Результат анализа: Основной Контекст=short
+2025-05-08 20:55:47 - 1H3M_TradingBot - ERROR - bot.find_entry_signals:202 - Ошибка при поиске сигналов входа: SignalGenerator.find_signals() got an unexpected keyword argument 'analysis_results'
+Traceback (most recent call last):
+  File "D:\mytsscript\core\bot.py", line 188, in find_entry_signals
+    signals, skips, fractals = self.signal_generator.find_signals(
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        data_1h=self.data_1h,
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        current_symbol=self.symbol
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+TypeError: SignalGenerator.find_signals() got an unexpected keyword argument 'analysis_results'
+2025-05-08 20:55:47 - 1H3M_TradingBot - ERROR - run.run_bot:208 - Необработанная ошибка в главном цикле: print_daily_limit() missing 1 required positional argument: 'point_size'
+Traceback (most recent call last):
+  File "D:\mytsscript\run.py", line 94, in run_bot
+    print_daily_limit(bot.daily_limit, bot.current_context)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: print_daily_limit() missing 1 required positional argument: 'point_size'
+2025-05-08 20:58:53 - 1H3M_TradingBot - INFO - run.run_bot:55 - Запуск основного приложения бота...
+2025-05-08 20:58:53 - 1H3M_TradingBot - INFO - bot.__init__:30 - Инициализация экземпляра бота для символа: EURUSD...
+2025-05-08 20:58:53 - 1H3M_TradingBot - INFO - bot.__init__:82 - Бот для EURUSD инициализирован. Max Target: 250 пт, Point Size: 0.0001
+2025-05-08 20:58:53 - 1H3M_TradingBot - INFO - run.run_bot:61 - Бот успешно инициализирован для символа EURUSD.
+2025-05-08 20:58:53 - 1H3M_TradingBot - INFO - bot.fetch_data:98 - Запрос на получение данных для EURUSD...
+2025-05-08 20:58:55 - 1H3M_TradingBot - INFO - bot.fetch_data:108 - Данные 1H загружены (500 свечей). PDL=1.12913, PDH=1.13785
+2025-05-08 20:58:55 - 1H3M_TradingBot - INFO - bot.fetch_data:115 - Данные 5min загружены (500 свечей). Текущая цена: 1.12267
+2025-05-08 20:58:55 - 1H3M_TradingBot - INFO - bot.analyze_market_context:142 - Результат анализа: Основной Контекст=short
+2025-05-08 20:58:55 - 1H3M_TradingBot - ERROR - bot.find_entry_signals:202 - Ошибка при поиске сигналов входа: name 'time' is not defined
+Traceback (most recent call last):
+  File "D:\mytsscript\core\bot.py", line 188, in find_entry_signals
+    signals, skips, fractals = self.signal_generator.find_signals(
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        data_1h=self.data_1h,
+        ^^^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+        current_symbol=self.symbol
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\mytsscript\analysis\signal_generator.py", line 246, in find_signals
+    sess_fractals = self._filter_fractals_by_session(bullish_fractals_1h + bearish_fractals_1h, session_name, current_utc_time)
+  File "D:\mytsscript\analysis\signal_generator.py", line 74, in _filter_fractals_by_session
+    session_start_hour_utc = time(start_hour_utc_val, 0, 0, tzinfo=timezone.utc)
+                             ^^^^
+NameError: name 'time' is not defined. Did you forget to import 'time'?
