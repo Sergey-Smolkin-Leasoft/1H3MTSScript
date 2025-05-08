@@ -38,7 +38,7 @@ class TradingBot1H3M:
         
         Parameters:
         symbol (str): Торговый символ (например, 'EURUSD', 'GER40')
-        timeframe_1h (str): Временной интервал для часового графика
+        timeframe_1h (str): Временнокй интервал для часового графика
         timeframe_3m (str): Временной интервал для 3-минутного графика
         """
         self.symbol = symbol
