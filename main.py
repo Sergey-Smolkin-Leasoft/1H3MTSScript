@@ -18,15 +18,29 @@ import mplfinance as mpf
 import io
 
 # Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("trading_bot.log", encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# Настройка логирования
 logger = logging.getLogger("1H3M_TradingBot")
+logger.setLevel(logging.INFO) # Общий уровень логгера
+
+# Форматтер
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Обработчик для файла (пишет все уровни INFO и выше)
+file_handler = logging.FileHandler("trading_bot.log", encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(formatter)
+
+# Обработчик для консоли (пишет только WARNING и выше)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(logging.WARNING) # <--- Только WARNING и выше в консоль
+stream_handler.setFormatter(formatter)
+
+# Добавляем обработчики к логгеру
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+# Убираем дублирование, если basicConfig был вызван ранее
+# logging.getLogger().handlers.clear() # Опционально, если basicConfig вызывался где-то еще
 
 class TradingBot1H3M:
     """
@@ -1335,7 +1349,8 @@ class TradingBot1H3M:
         # 2. Проверка, что фрактал не слишком старый (больше 2 дней)
         fractal_time = pd.to_datetime(fractal['timestamp']) # Убедитесь, что pandas импортирован: import pandas as pd
         if (datetime.now() - fractal_time).days > 2: # Убедитесь, что datetime импортирован: from datetime import datetime
-            skip_reasons.append("Фрактал старше 2 дней")
+            #skip_reasons.append("Фрактал старше 2 дней")
+            pass
         
         # 3. Проверка расстояния до цели
         try:
@@ -1392,9 +1407,9 @@ class TradingBot1H3M:
                                 if self.check_fractal_breakout(fractal): 
                                     skip_reasons.append("Frankfurt manipulation setup")
                     else:
-                        logger.info("Не найдены свечи Франкфуртской сессии для проверки Frankfurt manipulation setup.")
+                        pass
                 else:
-                    logger.info("recent_3m пуст, невозможно проверить Frankfurt manipulation setup.")
+                    pass
                         
         # 4. Проверка на противоречие контексту (это условие уже проверено в find_entry_signals, но можно оставить для надежности)
         if (self.current_context == 'long' and fractal['type'] == 'bearish') or \
@@ -1476,7 +1491,8 @@ class TradingBot1H3M:
         # 2. Проверка, что фрактал не слишком старый (больше 2 дней)
         fractal_time = pd.to_datetime(fractal['timestamp'])
         if (datetime.now() - fractal_time).days > 2:
-            skip_reasons.append("Фрактал старше 2 дней")
+            #skip_reasons.append("Фрактал старше 2 дней")
+            pass
         
         # 3. Проверка расстояния до цели
         try:

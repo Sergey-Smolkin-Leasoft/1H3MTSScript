@@ -195,10 +195,18 @@ def print_skip_conditions(conditions):
 
     print(f"\n{Fore.YELLOW}{Style.BRIGHT}Пропущенные сигналы (за сегодня):")
     for cond in today_skips:
-        reasons = ", ".join(cond['reasons'])
-        # Добавим проверку наличия фрактала и его цены
-        fractal_price_str = f"{cond['fractal']['price']:.5f}" if 'fractal' in cond and 'price' in cond['fractal'] else "N/A"
-        print(f"  {Fore.WHITE}Фрактал {fractal_price_str}: {Fore.YELLOW}{reasons}")
+    # Проверяем, что cond - это словарь и содержит ключ 'reasons'
+        if isinstance(cond, dict) and 'reasons' in cond:
+            reasons_list = cond['reasons'] # Получаем список причин
+            reasons_str = ", ".join(reasons_list)
+            # --- ДОБАВИТЬ УСЛОВИЕ ---
+            # Проверяем, что это не ЕДИНСТВЕННАЯ причина "Фрактал старше 2 дней"
+            if not (len(reasons_list) == 1 and reasons_list[0] == "Фрактал старше 2 дней"):
+                fractal_price_str = f"{cond['fractal']['price']:.5f}" if 'fractal' in cond and isinstance(cond.get('fractal'), dict) and 'price' in cond['fractal'] else "N/A"
+                print(f"  {Fore.WHITE}Фрактал {fractal_price_str}: {Fore.YELLOW}{reasons_str}")
+            # --- КОНЕЦ УСЛОВИЯ ---
+            else:
+                print(f"  {Fore.RED}Не удалось обработать пропущенное условие: {cond}")
 
 
 def print_daily_limit(limit, context):
