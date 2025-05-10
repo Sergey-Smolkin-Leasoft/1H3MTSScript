@@ -147,34 +147,7 @@ class TradingBot1H3M:
             self.analysis_results['primary_context'] = 'neutral'
             self.current_context = 'neutral'
             
-    def update_daily_limit(self):
-        """
-        PDL/PDH (предыдущего дня) служат основными дневными ориентирами.
-        Атрибут self.daily_limit инициализирован как None и пока не обновляется активно,
-        так как новая логика анализа фокусируется на PDL/PDH.
-        Если для вывода или другой логики нужен DL текущего дня, его нужно будет рассчитать.
-        """
-        self.logger.debug(f"Дневные ориентиры (пред. день): PDL={self._format_price_display(self.pdl)}, PDH={self._format_price_display(self.pdh)}")
-        # Если функция print_daily_limit все еще используется и ожидает self.daily_limit,
-        # а вы хотите показывать там что-то осмысленное (например, экстремумы ТЕКУЩЕГО дня),
-        # то здесь нужно добавить логику для вычисления и присвоения self.daily_limit.
-        # Например:
-        # if self.data_1h is not None and not self.data_1h.empty:
-        # current_day_data = self.data_1h[self.data_1h.index.date == datetime.utcnow().date()]
-        # if not current_day_data.empty:
-        # if self.current_context == 'long':
-        # self.daily_limit = float(current_day_data['low'].min())
-        # elif self.current_context == 'short':
-        # self.daily_limit = float(current_day_data['high'].max())
-        # else:
-        # self.daily_limit = None
-        # else:
-        # self.daily_limit = None # Нет данных за сегодня
-        # else:
-        # self.daily_limit = None # Нет данных 1H
-        # self.logger.info(f"DL (экстремум текущего дня, если рассчитывается): {self._format_price_display(self.daily_limit)}")
-        pass # Пока оставляем self.daily_limit как None
-
+    
     def find_entry_signals(self) -> list:
         """Ищет сигналы для входа, вызывая SignalGenerator."""
         self.logger.debug("Поиск сигналов входа...")

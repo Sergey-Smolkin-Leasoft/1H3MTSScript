@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 import matplotlib.pyplot as plt
 import mplfinance as mpf
+from config.settings import settings
 from datetime import datetime
 
 class Plotter:

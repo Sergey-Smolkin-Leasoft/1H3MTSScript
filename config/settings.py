@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # --- Настройки API ---
-TWELVE_DATA_API_KEY = os.getenv('TWELVE_DATA_API_KEY', 'ВАШ_КЛЮЧ_API_ЗДЕСЬ') # Замените на ваш ключ или оставьте получение из .env
+TWELVE_DATA_API_KEY = os.getenv('TWELVE_DATA_API_KEY') # Замените на ваш ключ или оставьте получение из .env
 
 # --- Общие настройки бота ---
 DEFAULT_SYMBOL = 'EURUSD' # Символ по умолчанию при запуске

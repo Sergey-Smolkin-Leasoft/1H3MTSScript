@@ -86,7 +86,7 @@ def run_bot():
 
             # --- Анализ и поиск сигналов ---
             bot.analyze_market_context() # Анализируем контекст
-            bot.update_daily_limit() # Обновляем дневной лимит
+           
             active_signals = bot.find_entry_signals() # Ищем сигналы
 
             # --- Отображение информации ---
@@ -129,7 +129,7 @@ def run_bot():
                 # Принудительно вызываем цикл обновления и анализа в боте
                 # bot.fetch_data() # Уже вызвали в начале цикла
                 # bot.analyze_market_context()
-                # bot.update_daily_limit()
+              
                 # active_signals = bot.find_entry_signals()
                 # Нет необходимости в явных вызовах здесь, т.к. они уже произошли
                 time.sleep(1) # Небольшая пауза для отображения сообщения
